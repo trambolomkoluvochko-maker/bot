@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (ATOMIC SNEEZE, RAGDOLL & NEON UI)
+-- LIVE SKIN BOT (FIXED DRAGGABLE NEON UI & ATOMIC SNEEZE)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -233,7 +233,7 @@ local function atomicSneeze()
     rayParams.FilterDescendantsInstances = {char}
 
     local startTime = tick()
-    while tick() - startTime < 8 do -- Ограничитель по времени (макс 8 сек)
+    while tick() - startTime < 8 do
         safeWait(0.1)
         local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -3.5, 0), rayParams)
         if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then
@@ -317,7 +317,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ------------------------------------------
--- 1. СТИЛЬНАЯ UI КНОПКА С ГРАДИЕНТОМ И НЕОНОМ
+-- 1. СТИЛЬНАЯ UI КНОПКА (ТЕМНЫЙ ФОН + DRAGGABLE)
 -- ------------------------------------------
 local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 if playerGui then
@@ -332,9 +332,11 @@ if playerGui then
 
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "BotToggle"
-    ToggleButton.Size = UDim2.new(0, 150, 0, 48)
+    ToggleButton.Size = UDim2.new(0, 155, 0, 48)
     ToggleButton.Position = UDim2.new(0.05, 0, 0.3, 0)
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    
+    -- 🖤 ТЕМНЫЙ ФОН ДЛЯ ЧЕТКОСТИ ТЕКСТА
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25) 
     ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     ToggleButton.TextSize = 16
     ToggleButton.Font = Enum.Font.FredokaOne
@@ -353,22 +355,22 @@ if playerGui then
     UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     UIStroke.Parent = ToggleButton
 
-    -- Стили состояний ВКЛ / ВЫКЛ
+    -- Стили состояний (ВКЛ - Зеленый неоновый, ВЫКЛ - Красный)
     local styles = {
         On = {
             Text = "ИИ:включен!",
             Stroke = Color3.fromRGB(0, 255, 120),
             Gradient = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 180, 85)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 90, 40))
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 80, 45)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 35, 20))
             })
         },
         Off = {
             Text = "ИИ:выключен!",
-            Stroke = Color3.fromRGB(255, 50, 50),
+            Stroke = Color3.fromRGB(255, 60, 60),
             Gradient = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 40, 40)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 15, 15))
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 20, 20)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(35, 12, 12))
             })
         }
     }
@@ -379,39 +381,57 @@ if playerGui then
         local targetStyle = enabled and styles.On or styles.Off
         ToggleButton.Text = targetStyle.Text
         
-        -- Плавная анимация подсветки и градиента
+        -- Плавная анимация контура и градиента
         TweenService:Create(UIStroke, tweenInfo, {Color = targetStyle.Stroke}):Play()
         TweenService:Create(UIGradient, tweenInfo, {Color = targetStyle.Gradient}):Play()
     end
 
-    -- Инициализация начального вида кнопки
     updateButtonUI(botActive)
 
-    -- Перетаскивание кнопки
-    local dragging, dragStart, startPos
+    -- 🖐️ НАДЕДНЫЙ МЕХАНИЗМ ПЕРЕТАСКИВАНИЯ (DRAG & DROP)
+    local dragging = false
+    local dragInput, dragStart, startPos
+    local hasDragged = false
+
+    local function updateDrag(input)
+        local delta = input.Position - dragStart
+        ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
     ToggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
+            hasDragged = false
             dragStart = input.Position
             startPos = ToggleButton.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    ToggleButton.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        if input == dragInput and dragging then
+            if (input.Position - dragStart).Magnitude > 5 then
+                hasDragged = true
+            end
+            updateDrag(input)
         end
     end)
 
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-
-    -- Клик по кнопке
+    -- Переключение ИИ по клику (только если не перетаскивали)
     ToggleButton.MouseButton1Click:Connect(function()
+        if hasDragged then return end
+        
         botActive = not botActive
         updateButtonUI(botActive)
         
@@ -560,7 +580,7 @@ safeSpawn(function()
                     safeWait(0.8)
 
                 else
-                    -- 2. ИСПРАВЛЕННЫЙ ВОЗВРАТ НА СПАВН (Исключает срабатывание рядом со спавном)
+                    -- 2. ИСПРАВЛЕННЫЙ ВОЗВРАТ НА СПАВН
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
 
@@ -620,4 +640,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Скрипт успешно готов к работе!")
+print("[BOT]: Скрипт с обновленной кнопкой успешно готов к работе!")
