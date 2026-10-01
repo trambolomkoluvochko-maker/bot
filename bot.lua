@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (NATURAL MOVEMENT & NEW PHRASES)
+-- LIVE SKIN BOT (FIXED CHAT LISTENER & MODERN TEXTCHATSERVICE)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -58,7 +58,7 @@ local jokesList = {
     "Разговаривают два бота: — Ты веришь в людей? — Не, это просто миф для школьников."
 }
 
-local greetingResponses = { "?", "Даров", "Досвидание", "Прив" }
+local greetingResponses = { "?", "Даров", "Досвидание", "Прив", "Здарова" }
 
 local randomPhrases = {
     "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересного чем этот сервер", "хмм...", 
@@ -106,9 +106,10 @@ local function sayMessage(text)
     end)
 end
 
-local function isGreetingWord(msg)
-    for word in string.gmatch(msg, "[%w_а-яА-ЯёЁ]+") do
-        if word == "ку" or word == "пр" or word == "привет" or word == "хай" or word == "дратути" then
+local function isGreeting(cleanMsg)
+    local greetings = { "ку", "пр", "привет", "хай", "дратути", "здарова", "салам", "хеллоу", "здаров" }
+    for _, word in ipairs(greetings) do
+        if cleanMsg:find("%f[%a_а-яА-ЯёЁ]" .. word .. "%f[%A_а-яА-ЯёЁ]") or cleanMsg == word then
             return true
         end
     end
@@ -259,49 +260,68 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ------------------------------------------
--- 3. Чат-слушатель
+-- 3. ОБРАБОТЧИК СООБЩЕНИЙ ЧАТА
 -- ------------------------------------------
-local function listenToChat(player)
-    player.Chatted:Connect(function(msg)
-        if not botActive then return end
-        local cleanMsg = msg:lower()
+local function processChatMessage(senderPlayer, msg)
+    if not botActive or senderPlayer == LocalPlayer then return end
+    
+    local cleanMsg = msg:lower()
+    local senderChar = senderPlayer.Character
+    local char = LocalPlayer.Character
+    if not senderChar or not char then return end
 
-        local senderChar = player.Character
-        local char = LocalPlayer.Character
-        if not senderChar or not char then return end
-        
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local senderHrp = senderChar:FindFirstChild("HumanoidRootPart")
-        if not hrp or not senderHrp then return end
-        
-        local dist = (senderHrp.Position - hrp.Position).Magnitude
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local senderHrp = senderChar:FindFirstChild("HumanoidRootPart")
+    if not hrp or not senderHrp then return end
 
-        if cleanMsg:find("следуй за мной") or cleanMsg:find("следуй замной") or cleanMsg:find("идем за мной") then
-            if dist <= 50 then
-                followingPlayer = player
-                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-                sayMessage("оке")
+    local dist = (senderHrp.Position - hrp.Position).Magnitude
+
+    -- Проверка команд
+    if cleanMsg:find("следуй") or cleanMsg:find("следу") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
+        if dist <= 60 then
+            followingPlayer = senderPlayer
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            sayMessage("оке")
+        end
+    elseif cleanMsg:find("хватит") or cleanMsg:find("отвянь") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
+        if followingPlayer == senderPlayer then
+            followingPlayer = nil
+            sayMessage("лан покеда")
+        end
+    elseif cleanMsg:find("анекдот") then
+        if dist <= 50 then
+            sayMessage(jokesList[math.random(#jokesList)])
+        end
+    elseif isGreeting(cleanMsg) and dist <= 40 then
+        sayMessage(greetingResponses[math.random(#greetingResponses)])
+    end
+end
+
+-- Подключение слушивателя для TextChatService (Современный чат)
+if TextChatService then
+    TextChatService.MessageReceived:Connect(function(textChatMessage)
+        local textSource = textChatMessage.TextSource
+        if textSource then
+            local senderPlayer = Players:GetPlayerByUserId(textSource.UserId)
+            if senderPlayer then
+                processChatMessage(senderPlayer, textChatMessage.Text)
             end
-        elseif cleanMsg:find("хватит ходить за мной") or cleanMsg:find("отвянь") then
-            if followingPlayer == player then
-                followingPlayer = nil
-                sayMessage("лан покеда")
-            end
-        elseif cleanMsg:find("расскажи анекдот") then
-            if dist <= 40 then
-                sayMessage(jokesList[math.random(#jokesList)])
-            end
-        elseif isGreetingWord(cleanMsg) and dist <= 35 then
-            sayMessage(greetingResponses[math.random(#greetingResponses)])
         end
     end)
 end
 
+-- Подключение слушателя для LegacyChat (Старый чат)
+local function listenLegacyChat(player)
+    player.Chatted:Connect(function(msg)
+        processChatMessage(player, msg)
+    end)
+end
+
 for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then listenToChat(p) end
+    if p ~= LocalPlayer then listenLegacyChat(p) end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then listenToChat(p) end
+    if p ~= LocalPlayer then listenLegacyChat(p) end
 end)
 
 -- ------------------------------------------
@@ -340,9 +360,9 @@ safeSpawn(function()
                         if math.random(1, 2) == 1 then
                             sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
                         end
-                        safeWait(math.random(3, 6)) -- Задержка отдыха после возвращения
+                        safeWait(math.random(3, 6))
                     else
-                        -- 3. Обычное активное поведение (Сбалансированное)
+                        -- 3. Обычное активное поведение
                         local actionChance = math.random(1, 10)
 
                         if actionChance == 1 then
@@ -357,24 +377,23 @@ safeSpawn(function()
                                     hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
                                     sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
                                 end
-                                safeWait(math.random(3, 6)) -- Таймер отдыха после подхода
+                                safeWait(math.random(3, 6))
                             else
-                                -- Если игроков рядом нет — просто прогулка
                                 safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                                 safeWait(math.random(2, 5))
                             end
 
                         elseif actionChance <= 6 then
-                            -- [ЧАСТО - 50%] Обычная случайная прогулка с естественной паузой
+                            -- [ЧАСТО - 50%] Прогулка с паузой
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                            safeWait(math.random(3, 7)) -- Бот стоит и отдыхает после шага
+                            safeWait(math.random(3, 7))
 
                         elseif actionChance <= 9 then
-                            -- [30%] Пауза на месте (просто стоит как обычный игрок)
+                            -- [30%] Стоит на месте
                             safeWait(math.random(4, 8))
 
                         else
-                            -- [10%] Использование предмета
+                            -- [10%] Предмет
                             useRandomItem()
                             safeWait(math.random(2, 4))
                         end
