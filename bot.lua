@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (ADVANCED AI + FOLLOW + GREETINGS)
+-- LIVE SKIN BOT (FIXED FOR DELTA ANDROID)
 -- ==========================================
 
 local Players = game:GetService("Players")
@@ -8,7 +8,7 @@ local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer or Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
 local botActive = false
 local lastChatTime = tick()
 local lastEscapeChat = 0
@@ -165,9 +165,9 @@ elseif syn and syn.protect_gui then
     syn.protect_gui(ScreenGui)
     ScreenGui.Parent = CoreGui
 else
-    pcall(function() ScreenGui.Parent = CoreGui end)
-    if not ScreenGui.Parent then
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    local success = pcall(function() ScreenGui.Parent = CoreGui end)
+    if not success or not ScreenGui.Parent then
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui", 5)
     end
 end
 
@@ -187,36 +187,34 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 10)
 UICorner.Parent = ToggleButton
 
-local dragging, dragInput, dragStart, startPos
-
-local function update(input)
-    local delta = input.Position - dragStart
-    ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-end
+local dragging = false
+local dragStart, startPos
+local isMoved = false
 
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        isMoved = false
         dragStart = input.Position
         startPos = ToggleButton.Position
 
-        input.Changed:Connect(function()
+        local conn
+        conn = input.Changed:Connect(function()
             if input.UserInputState == Enum.UserInputState.End then
                 dragging = false
+                if conn then conn:Disconnect() end
             end
         end)
     end
 end)
 
-ToggleButton.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        if delta.Magnitude > 5 then
+            isMoved = true
+            ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
     end
 end)
 
@@ -369,11 +367,13 @@ local function useRandomItem()
 
     if #tools > 0 then
         local randomTool = tools[math.random(#tools)]
-        char.Humanoid:EquipTool(randomTool)
-        task.wait(0.4)
-        randomTool:Activate()
-        task.wait(math.random(1, 2))
-        char.Humanoid:UnequipTools()
+        if char:FindFirstChild("Humanoid") then
+            char.Humanoid:EquipTool(randomTool)
+            task.wait(0.4)
+            randomTool:Activate()
+            task.wait(math.random(1, 2))
+            char.Humanoid:UnequipTools()
+        end
     end
 end
 
@@ -427,7 +427,7 @@ local function listenToChat(player)
         if cleanMsg:find("расскажи анекдот") then
             if dist > 120 then
                 hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-                sayMessage("не ну тыб хотябы  был где то виднее или мне что в африку бежать за тобой?")
+                sayMessage("не ну тыб хотябы был где то виднее или мне что в африку бежать за тобой?")
             else
                 if dist > 12 then
                     safeMoveTo(senderHrp.Position + Vector3.new(math.random(-3, 3), 0, math.random(-3, 3)), 4)
@@ -470,10 +470,8 @@ task.spawn(function()
         task.wait(0.5)
 
         if botActive then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if not char then return end
-                
+            local char = LocalPlayer.Character
+            if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
                 local hrp = char:FindFirstChild("HumanoidRootPart")
 
@@ -520,7 +518,7 @@ task.spawn(function()
                                             else
                                                 break
                                             end
-                                            task.wait(0.05)
+                                            task.wait(0.1)
                                         end
                                     else
                                         useRandomItem()
@@ -555,7 +553,7 @@ task.spawn(function()
                             end
                         end
                     end
-                end)
+                end
             end
         end
     end
@@ -563,6 +561,7 @@ end)
 
 -- Переключатель ВКЛ / ВЫКЛ
 ToggleButton.MouseButton1Click:Connect(function()
+    if isMoved then return end
     botActive = not botActive
     if botActive then
         ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
