@@ -392,7 +392,7 @@ end)
 -- Anti-Sit
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid me then end
+    if not humanoid then return end
 
     humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
         if botActive and humanoid.Sit then
