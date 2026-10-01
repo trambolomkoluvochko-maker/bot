@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED UI & STABLE BOT LOGIC)
+-- LIVE SKIN BOT (CLASSIC SINGLE BUTTON + FIX)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -21,12 +21,9 @@ local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-if not LocalPlayer then
-    warn("[BOT ERROR]: LocalPlayer не найден!")
-    return
-end
+if not LocalPlayer then return end
 
--- Поиск лучшего контейнера для GUI (CoreGui / gethui / PlayerGui)
+-- Контейнер GUI
 local function getGuiParent()
     local success, parent = pcall(function()
         if gethui then return gethui() end
@@ -114,13 +111,7 @@ local jokesList = {
 }
 
 local greetingResponses = { "?", "Даров", "Досвидание", "Прив", "Здарова" }
-
-local botIdentityPhrases = {
-    "А ты тоже чтоли?",
-    "Нет я болтик",
-    "Ес оф корс"
-}
-
+local botIdentityPhrases = { "А ты тоже чтоли?", "Нет я болтик", "Ес оф корс" }
 local spawnReturnPhrases = {
     "Какой гений меня отправил в африку? Мне нравилось усебя быть..",
     "Надоела эта брукхейвенская рутина..",
@@ -137,25 +128,16 @@ local randomPhrases = {
     "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
     ":0", "Ходилкин бродилкин", 
     "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
-    "Забавный факт: это и есть забавный факт",
-    "Да емае ну бл ну.. ну бл :[",
-    "Жить хочу",
-    "Скучные тут все...",
-    "Я не кому не ужин...",
-    "Я во всем виноград",
-    "😶",
-    "🍞"
+    "Забавный факт: это и есть забавный факт", "Да емае ну бл ну.. ну бл :[", "Жить хочу", "Скучные тут все...",
+    "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞"
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
-
 local playerStarePhrases = { 
     "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
     "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", 
     "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу",
-    "Вы игроки всегда так.. наряживаетесь?",
-    "Кал переделывай",
-    "Живой нет?"
+    "Вы игроки всегда так.. наряживаетесь?", "Кал переделывай", "Живой нет?"
 }
 
 -- Чат
@@ -184,9 +166,7 @@ local function isGreeting(cleanMsg)
     local greetings = { "ку", "пр", "привет", "хай", "дратути", "здарова", "салам", "хеллоу", "здаров" }
     for word in cleanMsg:gmatch("[%wа-яёА-ЯЁ]+") do
         for _, g in ipairs(greetings) do
-            if word == g then
-                return true
-            end
+            if word == g then return true end
         end
     end
     return false
@@ -215,7 +195,6 @@ local function atomicSneeze()
     if not char or not hrp or not hum or isSneezing or not botActive then return end
 
     isSneezing = true
-
     local sound = hrp:FindFirstChild("AtomicSneeze")
     if sound then sound:Play() end
 
@@ -232,9 +211,7 @@ local function atomicSneeze()
     while tick() - startTime < 8 do
         safeWait(0.1)
         local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -3.5, 0), rayParams)
-        if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then
-            break
-        end
+        if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then break end
     end
 
     safeWait(0.5)
@@ -309,11 +286,10 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖥️ НАДЕЖНЫЙ UI ИНТЕРФЕЙС
+-- 🖱️ ОДНОРОДНАЯ КНОПКА С ТОЧНЫМ КЛИКОМ
 -- ==========================================
 local parentGui = getGuiParent()
 
--- Удаляем старый UI если есть
 for _, child in ipairs(parentGui:GetChildren()) do
     if child.Name == "LiveBotCanavaGui" then
         child:Destroy()
@@ -326,104 +302,69 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
--- Основная карточка (Frame)
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 180, 0, 95)
-MainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Parent = ScreenGui
-
-local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 14)
-FrameCorner.Parent = MainFrame
-
-local FrameStroke = Instance.new("UIStroke")
-FrameStroke.Thickness = 2
-FrameStroke.Color = Color3.fromRGB(255, 60, 60)
-FrameStroke.Parent = MainFrame
-
--- Заголовок / Плашка перетаскивания
-local Header = Instance.new("TextLabel")
-Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 30)
-Header.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-Header.Text = "🤖 LIVE SKIN BOT"
-Header.TextColor3 = Color3.fromRGB(200, 200, 220)
-Header.TextSize = 13
-Header.Font = Enum.Font.FredokaOne
-Header.Parent = MainFrame
-
-local HeaderCorner = Instance.new("UICorner")
-HeaderCorner.CornerRadius = UDim.new(0, 14)
-HeaderCorner.Parent = Header
-
--- Кнопка Включения/Выключения
 local ToggleButton = Instance.new("TextButton")
-ToggleButton.Name = "BotToggle"
-ToggleButton.Size = UDim2.new(0.88, 0, 0, 48)
-ToggleButton.Position = UDim2.new(0.06, 0, 0.4, 0)
+ToggleButton.Name = "BotButton"
+ToggleButton.Size = UDim2.new(0, 160, 0, 48)
+ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
 ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-ToggleButton.Text = "ВКЛЮЧИТЬ ИИ"
+ToggleButton.Text = "🤖 ИИ: ВЫКЛЮЧЕН"
 ToggleButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-ToggleButton.TextSize = 15
+ToggleButton.TextSize = 14
 ToggleButton.Font = Enum.Font.FredokaOne
-ToggleButton.AutoButtonColor = true
-ToggleButton.Parent = MainFrame
+ToggleButton.Active = true
+ToggleButton.Parent = ScreenGui
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 10)
+BtnCorner.CornerRadius = UDim.new(0, 12)
 BtnCorner.Parent = ToggleButton
 
 local BtnStroke = Instance.new("UIStroke")
-BtnStroke.Thickness = 1.5
+BtnStroke.Thickness = 2
 BtnStroke.Color = Color3.fromRGB(255, 60, 60)
 BtnStroke.Parent = ToggleButton
 
--- Функция обновления внешнего вида UI
-local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function updateUIState(active)
     if active then
-        ToggleButton.Text = "ИИ: АКТИВЕН"
+        ToggleButton.Text = "🤖 ИИ: АКТИВЕН"
         ToggleButton.TextColor3 = Color3.fromRGB(100, 255, 150)
         TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(15, 55, 30)}):Play()
         TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(0, 255, 120)}):Play()
-        TweenService:Create(FrameStroke, tweenInfo, {Color = Color3.fromRGB(0, 255, 120)}):Play()
     else
-        ToggleButton.Text = "ИИ: ВЫКЛЮЧЕН"
+        ToggleButton.Text = "🤖 ИИ: ВЫКЛЮЧЕН"
         ToggleButton.TextColor3 = Color3.fromRGB(255, 100, 100)
         TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(55, 15, 15)}):Play()
         TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 60, 60)}):Play()
-        TweenService:Create(FrameStroke, tweenInfo, {Color = Color3.fromRGB(255, 60, 60)}):Play()
     end
 end
 
-updateUIState(botActive)
-
--- 🖱️ ПЕРЕТАСКИВАНИЕ ТОЛЬКО ЗА ВЕРХНЮЮ ШАПКУ (HEADER)
+-- ЛОГИКА ПЕРЕТАСКИВАНИЯ И КЛИКА
 local dragging = false
+local dragMoved = false
 local dragStart, startPos
 
-Header.InputBegan:Connect(function(input)
+ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        dragMoved = false
         dragStart = input.Position
-        startPos = MainFrame.Position
+        startPos = ToggleButton.Position
     end
 end)
 
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
+        if delta.Magnitude > 5 then
+            dragMoved = true
+            ToggleButton.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
+        end
     end
 end)
 
@@ -433,22 +374,21 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- ⚡ МГНОВЕННЫЙ И НАДЕЖНЫЙ КЛИК ПО КНОПКЕ
-ToggleButton.Activated:Connect(function()
-    botActive = not botActive
-    updateUIState(botActive)
-    
-    if botActive then
-        print("[BOT]: ИИ включен!")
-    else
-        followingPlayer = nil
-        print("[BOT]: ИИ выключен!")
+ToggleButton.MouseButton1Click:Connect(function()
+    if not dragMoved then
+        botActive = not botActive
+        updateUIState(botActive)
+        
+        if botActive then
+            print("[BOT]: ИИ включен!")
+        else
+            followingPlayer = nil
+            print("[BOT]: ИИ выключен!")
+        end
     end
 end)
 
--- ------------------------------------------
--- Защита от сидений
--- ------------------------------------------
+-- Anti-Sit
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
@@ -466,9 +406,7 @@ end
 if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
--- ------------------------------------------
--- Чат слушатель
--- ------------------------------------------
+-- Чат
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     if tick() - lastResponseTime < 2 then return end
@@ -523,22 +461,18 @@ if TextChatService then
     end)
 end
 
-local function listenLegacyChat(player)
-    player.Chatted:Connect(function(msg)
-        processChatMessage(player, msg)
-    end)
-end
-
 for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then listenLegacyChat(p) end
+    if p ~= LocalPlayer then
+        p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
+    end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then listenLegacyChat(p) end
+    if p ~= LocalPlayer then
+        p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
+    end
 end)
 
--- ------------------------------------------
--- Главный поток
--- ------------------------------------------
+-- Главный цикл ИИ
 safeSpawn(function()
     print("[BOT]: Поток ИИ готов!")
     while true do
