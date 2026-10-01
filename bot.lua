@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED THREAD YIELDING & MOVEMENT)
+-- LIVE SKIN BOT (ACTIVE MOVEMENT, SPAWN RETURN & FIXED CHAT)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -25,8 +25,7 @@ end
 
 local botActive = false
 local lastChatTime = tick()
-local lastEscapeChat = 0
-local chatCooldown = math.random(12, 25)
+local chatCooldown = math.random(10, 20)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 
@@ -49,7 +48,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     updateSpawnPosition()
 end)
 
--- Базы фраз и анекдотов
+-- Базы фраз
 local jokesList = {
     "Колобок повесился... А вообще ладно: Заходит бот в бар, а бармен говорит: 'Служба поддержки в соседнем здании!'",
     "Почему программисты любят темную тему? Потому что свет привлекает багов!",
@@ -70,18 +69,24 @@ local randomPhrases = {
     "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток.."
 }
 
-local escapePhrases = { "НЕ НЕ НЕ", "НЕНАДО", "АААА ОТСТАНЬ", "Я УБЕГАЮ!", "ДАЖЕ НЕ ДУМАЙ", "ОЙ ОЙ ОЙ МЕНЯ СЕЙЧАС СКУШАЮТ", "НЕ ПОЙМАЕШЬ!", "ДА ЧЕ Я ТЕБЕ ЗДЕЛАЛ?!?", "0______0" }
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
 local playerStarePhrases = { "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу" }
+local spawnReturnPhrases = { "Ладно, пойду на спавн отдохну", "Возвращаюсь на спавн...", "Опять на спавн пилить..", "Пойду посижу у спавна" }
 
--- Отправка сообщений в чат
+-- Отправка сообщений в чат (Гарантированная доставка)
 local function sayMessage(text)
+    if not text or text == "" then return end
     safeSpawn(function()
         pcall(function()
-            if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local sent = false
+            if TextChatService and TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
                 local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-                if channel then channel:SendAsync(text) end
-            else
+                if channel then 
+                    channel:SendAsync(text)
+                    sent = true
+                end
+            end
+            if not sent then
                 local events = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
                 local sayReq = events and events:FindFirstChild("SayMessageRequest")
                 if sayReq then sayReq:FireServer(text, "All") end
@@ -99,12 +104,12 @@ local function isGreetingWord(msg)
     return false
 end
 
--- Поиск игроков
+-- Поиск ближайшего игрока
 local function getNearestPlayer(minDist, maxDist)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
-    local nearest, closestDist = nil, maxDist or 35
+    local nearest, closestDist = nil, maxDist or 50
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -136,22 +141,22 @@ local function useRandomItem()
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             hum:EquipTool(randomTool)
-            safeWait(0.4)
+            safeWait(0.3)
             randomTool:Activate()
-            safeWait(1)
+            safeWait(0.8)
             hum:UnequipTools()
         end
     end
 end
 
--- Безопасное перемещение
+-- Перемещение
 local function safeMoveTo(targetPos)
     local char = LocalPlayer.Character
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
-    if math.random(1, 3) == 1 then hum.Jump = true end
+    if math.random(1, 4) == 1 then hum.Jump = true end
     hum:MoveTo(targetPos)
 end
 
@@ -223,7 +228,7 @@ if playerGui then
 end
 
 -- ------------------------------------------
--- 2. Логика защиты от седел
+-- 2. Защита от сидений
 -- ------------------------------------------
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
@@ -243,7 +248,7 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ------------------------------------------
--- 3. Слушатель чата
+-- 3. Чат-слушатель
 -- ------------------------------------------
 local function listenToChat(player)
     player.Chatted:Connect(function(msg)
@@ -289,12 +294,12 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ------------------------------------------
--- 4. Главная петля поведения (БЕЗ YIELD В PCALL)
+-- 4. Главный цикл активного поведения
 -- ------------------------------------------
 safeSpawn(function()
     print("[BOT]: Главный поток поведения запущен!")
     while true do
-        safeWait(0.5)
+        safeWait(0.2)
 
         if botActive then
             local char = LocalPlayer.Character
@@ -302,7 +307,7 @@ safeSpawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hum and hrp and hum.Health > 0 then
-                -- 1. Режим следования
+                -- 1. Режим следования за игроком
                 if followingPlayer then
                     local targetChar = followingPlayer.Character
                     if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -313,48 +318,59 @@ safeSpawn(function()
                     else
                         followingPlayer = nil
                     end
-                    safeWait(1)
+                    safeWait(0.8)
                 else
-                    -- 2. Обычное поведение
-                    local actionChance = math.random(1, 10)
+                    -- 2. Проверка возврата на спавн (если слишком далеко или рандомный выбор)
+                    local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
+                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 12) == 12 and distFromSpawn > 25)
 
-                    if actionChance <= 5 then
-                        -- Случайный шаг
-                        safeMoveTo(hrp.Position + Vector3.new(math.random(-25, 25), 0, math.random(-25, 25)))
-                        safeWait(math.random(2, 4))
+                    if shouldReturnSpawn then
+                        safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
+                        if math.random(1, 2) == 1 then
+                            sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
+                        end
+                        safeWait(2)
+                    else
+                        -- 3. Обычное активное передвижение
+                        local actionChance = math.random(1, 10)
 
-                    elseif actionChance <= 8 then
-                        -- Попытка подойти к ближайшему игроку
-                        local targetChar = getNearestPlayer(0, 40)
-                        if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                            safeMoveTo(targetChar.HumanoidRootPart.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                            safeWait(2)
-                            
-                            local tHrp = targetChar:FindFirstChild("HumanoidRootPart")
-                            if hrp and tHrp then
-                                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
-                                if math.random(1, 10) <= 7 then
+                        if actionChance <= 4 then
+                            -- Обычный случайный шаг рядом
+                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                            safeWait(1.2)
+
+                        elseif actionChance <= 8 then
+                            -- Подход к ближайшему игроку и произнесение фразы
+                            local targetChar = getNearestPlayer(0, 45)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                local tHrp = targetChar.HumanoidRootPart
+                                safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                safeWait(1)
+
+                                -- Поворот к игроку и БЕЗУСЛОВНАЯ отправка реплики
+                                if hrp and tHrp then
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
                                     sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
                                 end
+                                safeWait(1.2)
+                            else
+                                -- Если рядом никого нет — пройтись дальше
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-25, 25), 0, math.random(-25, 25)))
+                                safeWait(1)
                             end
-                            safeWait(2)
-                        else
-                            -- Если людей рядом нет — просто прогуляться
-                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                            safeWait(3)
-                        end
 
-                    else
-                        -- Предмет из инвентаря
-                        useRandomItem()
-                        safeWait(2)
+                        else
+                            -- Использование предмета
+                            useRandomItem()
+                            safeWait(1)
+                        end
                     end
 
                     -- Автономный фоновый чат
                     if tick() - lastChatTime >= chatCooldown then
                         sayMessage(randomPhrases[math.random(#randomPhrases)])
                         lastChatTime = tick()
-                        chatCooldown = math.random(15, 30)
+                        chatCooldown = math.random(12, 22)
                     end
                 end
             end
