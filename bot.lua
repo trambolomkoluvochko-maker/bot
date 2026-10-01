@@ -1,6 +1,11 @@
 -- ==========================================
--- LIVE SKIN BOT (ADVANCED AI + FOLLOW + GREETINGS)
+-- LIVE SKIN BOT (FIXED TASK.WAIT & SYNTAX)
 -- ==========================================
+
+-- Безопасная обертка для task (чтобы скрипт не падал, если task.wait выбивает ошибку)
+local task = task or {}
+task.wait = task.wait or wait
+task.spawn = task.spawn or function(f, ...) return coroutine.wrap(f)(...) end
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -90,10 +95,10 @@ local randomPhrases = {
 local escapePhrases = {
     "НЕ НЕ НЕ",
     "НЕНАДО",
-    "АААА ОТСТАНЬ",
+    "ОТВЯНЬ",
     "Я УБЕГАЮ!",
     "ДАЖЕ НЕ ДУМАЙ",
-    "ОЙ ОЙ ОЙ МЕНЯ СЕЙЧАС СКУШАЮТ",
+    "НЕТ",
     "НЕ ПОЙМАЕШЬ!",
     "ДА ЧЕ Я ТЕБЕ ЗДЕЛАЛ?!?",
     "0______0"
@@ -555,8 +560,8 @@ task.spawn(function()
                             end
                         end
                     end
-                end)
-            end
+                end
+            end)
         end
     end
 end)
