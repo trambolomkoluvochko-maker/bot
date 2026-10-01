@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (RETREAT FIX, NO DOUBLE CHAT & NEW PHRASES)
+-- LIVE SKIN BOT (ATOMIC SNEEZE, RAGDOLL & NEON UI)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -16,6 +16,8 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then
@@ -24,6 +26,7 @@ if not LocalPlayer then
 end
 
 local botActive = false
+local isSneezing = false
 local lastChatTime = tick()
 local lastResponseTime = 0 -- Дебаунс от двойных ответов в чате
 local chatCooldown = math.random(10, 20)
@@ -47,11 +50,29 @@ local function cleanText(str)
     return str
 end
 
+-- Настройка 3D звука чиха
+local function setupSneezeSound(char)
+    if not char then return end
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hrp then
+        local oldSound = hrp:FindFirstChild("AtomicSneeze")
+        if oldSound then oldSound:Destroy() end
+
+        local sneezeSound = Instance.new("Sound")
+        sneezeSound.Name = "AtomicSneeze"
+        sneezeSound.SoundId = "rbxassetid://75348227771086"
+        sneezeSound.Volume = 2.5
+        sneezeSound.RollOffMaxDistance = 150 -- Слышно всем игрокам в радиусе 150 студов
+        sneezeSound.RollOffMinDistance = 10
+        sneezeSound.Parent = hrp
+    end
+end
+
 -- Обновление позиции спавна
 local function updateSpawnPosition()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        local spawnPart = workspace:FindFirstChild("SpawnLocation", true) or workspace:FindFirstChild("Spawns", true)
+        local spawnPart = Workspace:FindFirstChild("SpawnLocation", true) or Workspace:FindFirstChild("Spawns", true)
         if spawnPart and spawnPart:IsA("BasePart") then
             spawnPosition = spawnPart.Position
         else
@@ -60,13 +81,18 @@ local function updateSpawnPosition()
     end
 end
 
-if LocalPlayer.Character then updateSpawnPosition() end
-LocalPlayer.CharacterAdded:Connect(function()
+if LocalPlayer.Character then 
+    updateSpawnPosition() 
+    setupSneezeSound(LocalPlayer.Character)
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
     safeWait(1)
     updateSpawnPosition()
+    setupSneezeSound(char)
 end)
 
--- Короткие анекдоты
+-- Фразы
 local jokesList = {
     "Заходит бот в бар, а бармен ему: 'Служба поддержки в соседнем здании!'",
     "Почему программисты любят темную тему? Свет привлекает багов!",
@@ -153,13 +179,79 @@ local function isGreeting(cleanMsg)
     return false
 end
 
--- Поиск опасности/игроков/тележек спереди
+-- Включение/Выключение Рэгдолла
+local function setRagdoll(char, active)
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    if active then
+        hum:ChangeState(Enum.HumanoidStateType.Physics)
+        hum.PlatformStand = true
+        for _, motor in pairs(char:GetDescendants()) do
+            if motor:IsA("Motor6D") and motor.Name ~= "Neck" then
+                motor.Enabled = false
+            end
+        end
+    else
+        for _, motor in pairs(char:GetDescendants()) do
+            if motor:IsA("Motor6D") then
+                motor.Enabled = true
+            end
+        end
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+end
+
+-- 💥 АТОМНЫЙ ЧИХ С ВЗЛЕТОМ
+local function atomicSneeze()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not char or not hrp or not hum or isSneezing or not botActive then return end
+
+    isSneezing = true
+
+    -- Звук чиха (слышат все вокруг)
+    local sound = hrp:FindFirstChild("AtomicSneeze")
+    if sound then
+        sound:Play()
+    end
+
+    -- Импульс взлета вверх
+    hrp.AssemblyLinearVelocity = Vector3.new(math.random(-15, 15), 180, math.random(-15, 15))
+
+    -- Включаем рэгдолл
+    setRagdoll(char, true)
+
+    safeWait(0.6)
+
+    -- Ждем приземления
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    rayParams.FilterDescendantsInstances = {char}
+
+    local startTime = tick()
+    while tick() - startTime < 8 do -- Ограничитель по времени (макс 8 сек)
+        safeWait(0.1)
+        local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -3.5, 0), rayParams)
+        if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then
+            break
+        end
+    end
+
+    safeWait(0.5)
+    setRagdoll(char, false)
+    isSneezing = false
+end
+
+-- Поиск опасности спереди
 local function isThreatInFront(hrp)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local pHrp = player.Character.HumanoidRootPart
             local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
-            -- Z < -1 означает впереди, Z > -16 означает в пределах 16 стадов, |X| < 6 — прямо перед нами
             if localPos.Z < -1 and localPos.Z > -16 and math.abs(localPos.X) < 6 then
                 return true
             end
@@ -225,7 +317,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ------------------------------------------
--- 1. GUI
+-- 1. СТИЛЬНАЯ UI КНОПКА С ГРАДИЕНТОМ И НЕОНОМ
 -- ------------------------------------------
 local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 if playerGui then
@@ -240,20 +332,62 @@ if playerGui then
 
     local ToggleButton = Instance.new("TextButton")
     ToggleButton.Name = "BotToggle"
-    ToggleButton.Size = UDim2.new(0, 140, 0, 45)
+    ToggleButton.Size = UDim2.new(0, 150, 0, 48)
     ToggleButton.Position = UDim2.new(0.05, 0, 0.3, 0)
-    ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-    ToggleButton.Text = "🤖 БОТ: ВЫКЛ"
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    ToggleButton.TextSize = 15
-    ToggleButton.Font = Enum.Font.SourceSansBold
+    ToggleButton.TextSize = 16
+    ToggleButton.Font = Enum.Font.FredokaOne
     ToggleButton.Active = true
     ToggleButton.Parent = ScreenGui
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.CornerRadius = UDim.new(0, 12)
     UICorner.Parent = ToggleButton
 
+    local UIGradient = Instance.new("UIGradient")
+    UIGradient.Parent = ToggleButton
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Thickness = 3
+    UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    UIStroke.Parent = ToggleButton
+
+    -- Стили состояний ВКЛ / ВЫКЛ
+    local styles = {
+        On = {
+            Text = "ИИ:включен!",
+            Stroke = Color3.fromRGB(0, 255, 120),
+            Gradient = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(35, 180, 85)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 90, 40))
+            })
+        },
+        Off = {
+            Text = "ИИ:выключен!",
+            Stroke = Color3.fromRGB(255, 50, 50),
+            Gradient = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(200, 40, 40)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(100, 15, 15))
+            })
+        }
+    }
+
+    local tweenInfo = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+    local function updateButtonUI(enabled)
+        local targetStyle = enabled and styles.On or styles.Off
+        ToggleButton.Text = targetStyle.Text
+        
+        -- Плавная анимация подсветки и градиента
+        TweenService:Create(UIStroke, tweenInfo, {Color = targetStyle.Stroke}):Play()
+        TweenService:Create(UIGradient, tweenInfo, {Color = targetStyle.Gradient}):Play()
+    end
+
+    -- Инициализация начального вида кнопки
+    updateButtonUI(botActive)
+
+    -- Перетаскивание кнопки
     local dragging, dragStart, startPos
     ToggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -276,15 +410,14 @@ if playerGui then
         end
     end)
 
+    -- Клик по кнопке
     ToggleButton.MouseButton1Click:Connect(function()
         botActive = not botActive
+        updateButtonUI(botActive)
+        
         if botActive then
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
-            ToggleButton.Text = "🤖 БОТ: ВКЛ"
             print("[BOT]: Активирован!")
         else
-            ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
-            ToggleButton.Text = "🤖 БОТ: ВЫКЛ"
             followingPlayer = nil
             print("[BOT]: Деактивирован!")
         end
@@ -315,9 +448,8 @@ LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 -- 3. ОБРАБОТЧИК СООБЩЕНИЙ ЧАТА
 -- ------------------------------------------
 local function processChatMessage(senderPlayer, msg)
-    if not botActive or senderPlayer == LocalPlayer then return end
+    if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     
-    -- Дебаунс 2 секунды от дублирования сообщений
     if tick() - lastResponseTime < 2 then return end
 
     local cleanMsg = cleanText(msg)
@@ -331,7 +463,7 @@ local function processChatMessage(senderPlayer, msg)
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
 
-    -- Проверка вызова "ты бот"
+    -- Вызов "ты бот"
     if cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") then
         lastResponseTime = tick()
         sayMessage(botIdentityPhrases[math.random(#botIdentityPhrases)])
@@ -396,15 +528,19 @@ safeSpawn(function()
     while true do
         safeWait(0.2)
 
-        if botActive then
+        if botActive and not isSneezing then
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hum and hrp and hum.Health > 0 then
 
-                -- 0. УБЕГАНИЕ НАЗАД, ЕСЛИ СПЕРЕДИ ПРИБЛИЖАЮТСЯ (ИГРОК / ТЕЛЕЖКА)
-                if isThreatInFront(hrp) then
+                -- 💥 ШАНС АТОМНОГО ЧИХА (Рандом 1 из 35 циклов)
+                if math.random(1, 35) == 1 then
+                    atomicSneeze()
+
+                -- 0. УБЕГАНИЕ НАЗАД, ЕСЛИ СПЕРЕДИ ПРИБЛИЖАЮТСЯ
+                elseif isThreatInFront(hrp) then
                     local escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 18)
                     hum:MoveTo(escapeTarget)
                     if math.random(1, 2) == 1 then hum.Jump = true end
@@ -424,9 +560,9 @@ safeSpawn(function()
                     safeWait(0.8)
 
                 else
-                    -- 2. Проверка возврата на спавн
+                    -- 2. ИСПРАВЛЕННЫЙ ВОЗВРАТ НА СПАВН (Исключает срабатывание рядом со спавном)
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
-                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 15) == 15 and distFromSpawn > 30)
+                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
 
                     if shouldReturnSpawn then
                         safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
