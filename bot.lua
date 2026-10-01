@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + SMART ESCAPE + PASCHAL)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + PRECISE CART ESCAPE + PASCHAL)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -59,7 +59,7 @@ local function cleanText(str)
     return str
 end
 
--- Звук чиха (ВЕРНУЛИ ГРОМКОСТЬ НА 5.0)
+-- Звук чиха (Громкий, как ты любишь: 5.0)
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -70,7 +70,7 @@ local function setupSneezeSound(char)
         local sneezeSound = Instance.new("Sound")
         sneezeSound.Name = "AtomicSneeze"
         sneezeSound.SoundId = "rbxassetid://75348227771086"
-        sneezeSound.Volume = 5.0 -- Громкость чиха как раньше!
+        sneezeSound.Volume = 5.0
         sneezeSound.RollOffMinDistance = 40
         sneezeSound.RollOffMaxDistance = 250
         sneezeSound.RollOffMode = Enum.RollOffMode.Linear
@@ -78,7 +78,7 @@ local function setupSneezeSound(char)
     end
 end
 
--- Звук кассеты Джекета (Новая приятная громкость)
+-- Звук кассеты Джекета (Новая комфортная громкость: 1.0)
 local function playJacketTapeSound()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -89,7 +89,7 @@ local function playJacketTapeSound()
         snd = Instance.new("Sound")
         snd.Name = "JacketTapeSound"
         snd.SoundId = "rbxassetid://136146723278872"
-        snd.Volume = 1.0 -- Спокойная нормальная громкость
+        snd.Volume = 1.0
         snd.RollOffMinDistance = 15
         snd.RollOffMaxDistance = 80
         snd.RollOffMode = Enum.RollOffMode.Linear
@@ -121,7 +121,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Фразы при побеге от тележки/машины/игроков
+-- Фразы при побеге от тележки
 local cartEscapePhrases = {
     "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
     "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
@@ -210,7 +210,7 @@ local function isGreeting(cleanMsg)
     return false
 end
 
--- Исправленный Атомный чих
+-- Атомный чих
 local function atomicSneeze()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -244,51 +244,34 @@ local function atomicSneeze()
     isSneezing = false
 end
 
--- Точное обнаружение угрозы (Игроки или Тележки/Сиденья)
-local function checkThreat(hrp)
+-- Точная проверка: бежит ли игрок С ТЕЛЕЖКОЙ/ПРЕДМЕТОМ С СИДЕНЬЕМ прямо на бота
+local function checkCartThreat(hrp)
     if not hrp then return nil, nil end
-    local char = LocalPlayer.Character
-
-    -- 1. Проверка ближайших игроков, быстро идущих/подбегающих к боту
+    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local pHrp = player.Character:FindFirstChild("HumanoidRootPart")
             local pHum = player.Character:FindFirstChildOfClass("Humanoid")
+            
             if pHrp and pHum and pHum.Health > 0 then
                 local dist = (pHrp.Position - hrp.Position).Magnitude
-                if dist <= 14 then
-                    local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
-                    local isFront = localPos.Z < 0 -- Z < 0 значит спереди
-                    return pHrp.Position, isFront
-                end
-            end
-        end
-    end
-
-    -- 2. Проверка объектов с сиденьями (тележки, машины)
-    local overlapParams = OverlapParams.new()
-    overlapParams.FilterType = Enum.RaycastFilterType.Exclude
-    if char then overlapParams.FilterDescendantsInstances = {char} end
-
-    local success, parts = pcall(function()
-        return Workspace:GetPartBoundsInBox(hrp.CFrame, Vector3.new(24, 10, 24), overlapParams)
-    end)
-
-    if success and parts then
-        for _, part in ipairs(parts) do
-            if not part.Anchored and part.Name ~= "Terrain" then
-                local isSeat = part:IsA("VehicleSeat") or part:IsA("Seat")
-                local pName = part.Name:lower()
-                local parentName = part.Parent and part.Parent.Name:lower() or ""
-                local isCart = pName:find("cart") or pName:find("car") or pName:find("seat") 
-                    or parentName:find("cart") or parentName:find("car") or parentName:find("тележ")
-
-                if isSeat or isCart then
-                    local dist = (part.Position - hrp.Position).Magnitude
-                    if dist <= 14 then
-                        local localPos = hrp.CFrame:PointToObjectSpace(part.Position)
-                        local isFront = localPos.Z < 0
-                        return part.Position, isFront
+                -- Если игрок подошел ближе чем на 12 студов
+                if dist <= 12 then
+                    -- Проверяем, есть ли у игрока в руках/на персонаже предмет с сиденьем (тележка и т.д.)
+                    local hasSeatItem = false
+                    
+                    -- Проверяем персонажа (одежду, инструмент в руках, дочерние объекты)
+                    for _, desc in ipairs(player.Character:GetDescendants()) do
+                        if desc:IsA("Seat") or desc:IsA("VehicleSeat") then
+                            hasSeatItem = true
+                            break
+                        end
+                    end
+                    
+                    if hasSeatItem then
+                        local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
+                        local isFront = localPos.Z < 0 -- Если Z < 0, то игрок спереди
+                        return pHrp.Position, isFront
                     end
                 end
             end
@@ -564,19 +547,19 @@ safeSpawn(function()
                     atomicSneeze()
 
                 else
-                    -- Проверяем наличие угрозы (тележка или близкий игрок)
-                    local threatPos, isFront = checkThreat(hrp)
+                    -- Проверяем, бежит ли игрок с тележкой/предметом с сиденьем
+                    local threatPos, isFront = checkCartThreat(hrp)
 
-                    -- 2. Улучшенный побег (Спереди -> Назад, Сзади -> Вперед, Скорость = 32)
+                    -- 2. Побег (Спереди -> Назад, Сзади -> Вперед, Скорость = 32)
                     if threatPos ~= nil then
                         hum.WalkSpeed = 32 -- Увеличиваем скорость до 32
 
                         local escapeTarget
                         if isFront then
-                            -- Угроза СПЕРЕДИ -> убегаем НАЗАД
+                            -- Игрок с тележкой СПЕРЕДИ -> убегаем НАЗАД
                             escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 28)
                         else
-                            -- Угроза СЗАДИ -> убегаем ВПЕРЕД
+                            -- Игрок с тележкой СЗАДИ -> убегаем ВПЕРЕД
                             escapeTarget = hrp.Position + (hrp.CFrame.LookVector * 28)
                         end
 
