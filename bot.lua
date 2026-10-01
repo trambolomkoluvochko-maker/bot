@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + ANTI-CART + PASCHAL)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + SMART ESCAPE + PASCHAL)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -59,7 +59,7 @@ local function cleanText(str)
     return str
 end
 
--- Звук чиха
+-- Звук чиха (ВЕРНУЛИ ГРОМКОСТЬ НА 5.0)
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -70,7 +70,7 @@ local function setupSneezeSound(char)
         local sneezeSound = Instance.new("Sound")
         sneezeSound.Name = "AtomicSneeze"
         sneezeSound.SoundId = "rbxassetid://75348227771086"
-        sneezeSound.Volume = 5.0
+        sneezeSound.Volume = 5.0 -- Громкость чиха как раньше!
         sneezeSound.RollOffMinDistance = 40
         sneezeSound.RollOffMaxDistance = 250
         sneezeSound.RollOffMode = Enum.RollOffMode.Linear
@@ -78,7 +78,7 @@ local function setupSneezeSound(char)
     end
 end
 
--- Воспроизведение звука кассеты Джекета (Hotline Miami)
+-- Звук кассеты Джекета (Новая приятная громкость)
 local function playJacketTapeSound()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -89,9 +89,9 @@ local function playJacketTapeSound()
         snd = Instance.new("Sound")
         snd.Name = "JacketTapeSound"
         snd.SoundId = "rbxassetid://136146723278872"
-        snd.Volume = 4.0
-        snd.RollOffMinDistance = 25
-        snd.RollOffMaxDistance = 150
+        snd.Volume = 1.0 -- Спокойная нормальная громкость
+        snd.RollOffMinDistance = 15
+        snd.RollOffMaxDistance = 80
         snd.RollOffMode = Enum.RollOffMode.Linear
         snd.Parent = hrp
     end
@@ -121,7 +121,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Фразы при побеге от тележки/машины
+-- Фразы при побеге от тележки/машины/игроков
 local cartEscapePhrases = {
     "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
     "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
@@ -210,22 +210,7 @@ local function isGreeting(cleanMsg)
     return false
 end
 
--- Рэгдолл
-local function setRagdoll(char, active)
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    if active then
-        hum:ChangeState(Enum.HumanoidStateType.Physics)
-        hum.PlatformStand = true
-    else
-        hum.PlatformStand = false
-        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-end
-
--- Атомный чих
+-- Исправленный Атомный чих
 local function atomicSneeze()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -236,8 +221,9 @@ local function atomicSneeze()
     local sound = hrp:FindFirstChild("AtomicSneeze")
     if sound then sound:Play() end
 
-    hrp.AssemblyLinearVelocity = Vector3.new(math.random(-15, 15), 180, math.random(-15, 15))
-    setRagdoll(char, true)
+    hum:ChangeState(Enum.HumanoidStateType.Physics)
+    hum.PlatformStand = true
+    hrp.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), 140, math.random(-20, 20))
 
     safeWait(0.6)
 
@@ -246,58 +232,70 @@ local function atomicSneeze()
     rayParams.FilterDescendantsInstances = {char}
 
     local startTime = tick()
-    while tick() - startTime < 8 do
+    while tick() - startTime < 6 do
         safeWait(0.1)
         local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -3.5, 0), rayParams)
         if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then break end
     end
 
-    safeWait(0.5)
-    setRagdoll(char, false)
+    safeWait(0.4)
+    hum.PlatformStand = false
+    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
     isSneezing = false
 end
 
--- Обнаружение угроз спереди
-local function isThreatInFront(hrp)
-    if not hrp then return false end
+-- Точное обнаружение угрозы (Игроки или Тележки/Сиденья)
+local function checkThreat(hrp)
+    if not hrp then return nil, nil end
     local char = LocalPlayer.Character
 
-    local checkCF = hrp.CFrame * CFrame.new(0, 0, -8)
+    -- 1. Проверка ближайших игроков, быстро идущих/подбегающих к боту
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local pHrp = player.Character:FindFirstChild("HumanoidRootPart")
+            local pHum = player.Character:FindFirstChildOfClass("Humanoid")
+            if pHrp and pHum and pHum.Health > 0 then
+                local dist = (pHrp.Position - hrp.Position).Magnitude
+                if dist <= 14 then
+                    local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
+                    local isFront = localPos.Z < 0 -- Z < 0 значит спереди
+                    return pHrp.Position, isFront
+                end
+            end
+        end
+    end
+
+    -- 2. Проверка объектов с сиденьями (тележки, машины)
     local overlapParams = OverlapParams.new()
     overlapParams.FilterType = Enum.RaycastFilterType.Exclude
     if char then overlapParams.FilterDescendantsInstances = {char} end
 
     local success, parts = pcall(function()
-        return Workspace:GetPartBoundsInBox(checkCF, Vector3.new(12, 8, 16), overlapParams)
+        return Workspace:GetPartBoundsInBox(hrp.CFrame, Vector3.new(24, 10, 24), overlapParams)
     end)
 
     if success and parts then
         for _, part in ipairs(parts) do
             if not part.Anchored and part.Name ~= "Terrain" then
                 local isSeat = part:IsA("VehicleSeat") or part:IsA("Seat")
-                local isFast = part.AssemblyLinearVelocity.Magnitude > 2.5
                 local pName = part.Name:lower()
                 local parentName = part.Parent and part.Parent.Name:lower() or ""
-                local isCart = pName:find("cart") or pName:find("car") or parentName:find("cart") or parentName:find("car") or parentName:find("тележ")
-                
-                if isSeat or isFast or isCart then
-                    return true
+                local isCart = pName:find("cart") or pName:find("car") or pName:find("seat") 
+                    or parentName:find("cart") or parentName:find("car") or parentName:find("тележ")
+
+                if isSeat or isCart then
+                    local dist = (part.Position - hrp.Position).Magnitude
+                    if dist <= 14 then
+                        local localPos = hrp.CFrame:PointToObjectSpace(part.Position)
+                        local isFront = localPos.Z < 0
+                        return part.Position, isFront
+                    end
                 end
             end
         end
     end
 
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pHrp = player.Character.HumanoidRootPart
-            local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
-            if localPos.Z < -1 and localPos.Z > -14 and math.abs(localPos.X) < 5 then
-                return true
-            end
-        end
-    end
-
-    return false
+    return nil, nil
 end
 
 local function getNearestPlayer(minDist, maxDist)
@@ -565,114 +563,127 @@ safeSpawn(function()
                 if math.random(1, 35) == 1 then
                     atomicSneeze()
 
-                -- 2. Побег от тележки/машины/угрозы + новые крики
-                elseif isThreatInFront(hrp) then
-                    local escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 18)
-                    hum:MoveTo(escapeTarget)
-                    sayMessage(cartEscapePhrases[math.random(#cartEscapePhrases)])
-                    if math.random(1, 2) == 1 then hum.Jump = true end
-                    safeWait(1.2)
-
-                -- 3. Режим «Следовать за игроком» (ПЛАВНАЯ ОСТАНОВКА БЕЗ ДЕРГАНИЯ)
-                elseif followingPlayer then
-                    local targetChar = followingPlayer.Character
-                    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
-
-                    if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
-                        local dist = (targetHrp.Position - hrp.Position).Magnitude
-
-                        -- Убежал слишком далеко
-                        if dist > 130 then
-                            sayMessage("ну знаешь чел я не флеш как ты так что адиос")
-                            followingPlayer = nil
-                            safeWait(1)
-                        -- Игрок идет
-                        elseif dist > 7.5 then
-                            hum:MoveTo(targetHrp.Position)
-                            if math.random(1, 12) == 1 then hum.Jump = true end
-                        -- Игрок остановился (Бот замирает и просто смотрим на него, БЕЗ постоянного MoveTo)
-                        else
-                            local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
-                            if (hrp.Position - lookPos).Magnitude > 0.1 then
-                                hrp.CFrame = CFrame.lookAt(hrp.Position, lookPos)
-                            end
-                        end
-                    else
-                        followingPlayer = nil
-                    end
-                    safeWait(0.2)
-
-                -- 4. Автономный режим бездельничества
                 else
-                    local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
-                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
+                    -- Проверяем наличие угрозы (тележка или близкий игрок)
+                    local threatPos, isFront = checkThreat(hrp)
 
-                    if shouldReturnSpawn then
-                        safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
-                        if math.random(1, 2) == 1 then
-                            sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
-                        end
-                        safeWait(math.random(3, 6))
-                    else
-                        local actionChance = math.random(1, 10)
+                    -- 2. Улучшенный побег (Спереди -> Назад, Сзади -> Вперед, Скорость = 32)
+                    if threatPos ~= nil then
+                        hum.WalkSpeed = 32 -- Увеличиваем скорость до 32
 
-                        -- Режим наблюдения (смотрит 8 сек)
-                        if actionChance <= 2 then
-                            local targetChar = getNearestPlayer(12, 55)
-                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                local tHrp = targetChar.HumanoidRootPart
-                                local observeStart = tick()
-
-                                while tick() - observeStart < 8 and botActive and not isSneezing and not followingPlayer do
-                                    if tHrp and hrp then
-                                        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
-                                    end
-                                    safeWait(0.2)
-                                end
-                            else
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(2, 5))
-                            end
-
-                        -- Подойти к игроку и сказать фразу
-                        elseif actionChance == 3 then
-                            local targetChar = getNearestPlayer(0, 35)
-                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                local tHrp = targetChar.HumanoidRootPart
-                                safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                                safeWait(1.5)
-
-                                if hrp and tHrp then
-                                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
-                                    sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
-                                end
-                                safeWait(math.random(3, 6))
-                            else
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(2, 5))
-                            end
-
-                        -- Прогулка
-                        elseif actionChance <= 6 then
-                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                            safeWait(math.random(3, 7))
-
-                        -- Стояние на месте
-                        elseif actionChance <= 9 then
-                            safeWait(math.random(4, 8))
-
-                        -- Использование предмета
+                        local escapeTarget
+                        if isFront then
+                            -- Угроза СПЕРЕДИ -> убегаем НАЗАД
+                            escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 28)
                         else
-                            useRandomItem()
-                            safeWait(math.random(2, 4))
+                            -- Угроза СЗАДИ -> убегаем ВПЕРЕД
+                            escapeTarget = hrp.Position + (hrp.CFrame.LookVector * 28)
+                        end
+
+                        hum:MoveTo(escapeTarget)
+                        sayMessage(cartEscapePhrases[math.random(#cartEscapePhrases)])
+                        if math.random(1, 2) == 1 then hum.Jump = true end
+
+                        safeWait(1.2)
+                        hum.WalkSpeed = 16 -- Возвращаем нормальную скорость
+
+                    -- 3. Режим «Следовать за игроком»
+                    elseif followingPlayer then
+                        local targetChar = followingPlayer.Character
+                        local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                        local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+                        if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
+                            local dist = (targetHrp.Position - hrp.Position).Magnitude
+
+                            if dist > 130 then
+                                sayMessage("ну знаешь чел я не флеш как ты так что адиос")
+                                followingPlayer = nil
+                                safeWait(1)
+                            elseif dist > 7.5 then
+                                hum:MoveTo(targetHrp.Position)
+                                if math.random(1, 12) == 1 then hum.Jump = true end
+                            else
+                                local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
+                                if (hrp.Position - lookPos).Magnitude > 0.1 then
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, lookPos)
+                                end
+                            end
+                        else
+                            followingPlayer = nil
+                        end
+                        safeWait(0.2)
+
+                    -- 4. Автономный режим бездельничества
+                    else
+                        local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
+                        local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
+
+                        if shouldReturnSpawn then
+                            safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
+                            if math.random(1, 2) == 1 then
+                                sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
+                            end
+                            safeWait(math.random(3, 6))
+                        else
+                            local actionChance = math.random(1, 10)
+
+                            -- Наблюдение за близким игроком (8 секунд)
+                            if actionChance <= 2 then
+                                local targetChar = getNearestPlayer(12, 55)
+                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                    local tHrp = targetChar.HumanoidRootPart
+                                    local observeStart = tick()
+
+                                    while tick() - observeStart < 8 and botActive and not isSneezing and not followingPlayer do
+                                        if tHrp and hrp then
+                                            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                        end
+                                        safeWait(0.2)
+                                    end
+                                else
+                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                    safeWait(math.random(2, 5))
+                                end
+
+                            -- Подойти к игроку и сказать фразу
+                            elseif actionChance == 3 then
+                                local targetChar = getNearestPlayer(0, 35)
+                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                    local tHrp = targetChar.HumanoidRootPart
+                                    safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                    safeWait(1.5)
+
+                                    if hrp and tHrp then
+                                        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                        sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
+                                    end
+                                    safeWait(math.random(3, 6))
+                                else
+                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                    safeWait(math.random(2, 5))
+                                end
+
+                            -- Прогулка
+                            elseif actionChance <= 6 then
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(3, 7))
+
+                            -- Стояние на месте
+                            elseif actionChance <= 9 then
+                                safeWait(math.random(4, 8))
+
+                            -- Использование предмета из инвентаря
+                            else
+                                useRandomItem()
+                                safeWait(math.random(2, 4))
+                            end
                         end
                     end
                 end
 
-                -- 5. Периодические фразы (включая редкую пасхалку Джекета)
+                -- 5. Периодические фразы (включая редкую кассету Джекета)
                 if tick() - lastChatTime >= chatCooldown then
-                    -- Шанс 1 из 40 выбить редкую кассету Джекета из Hotline Miami
                     if math.random(1, 40) == 1 then
                         playJacketTapeSound()
                         sayMessage("do you know what time it is?")
