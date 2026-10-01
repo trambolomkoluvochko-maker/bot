@@ -33,17 +33,18 @@ local chatCooldown = math.random(10, 20)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 
--- Корректный перевод русского текста в нижний регистр
+-- Таблица для корректного перевода кириллицы в нижний регистр
+local cyrillicUpper = {
+    ["А"]="а", ["Б"]="б", ["В"]="в", ["Г"]="г", ["Д"]="д", ["Е"]="е", ["Ё"]="ё",
+    ["Ж"]="ж", ["З"]="з", ["И"]="и", ["Й"]="й", ["К"]="к", ["Л"]="л", ["М"]="м",
+    ["Н"]="н", ["О"]="о", ["П"]="п", ["Р"]="р", ["С"]="с", ["Т"]="т", ["У"]="у",
+    ["Ф"]="ф", ["Х"]="х", ["Ц"]="ц", ["Ч"]="ч", ["Ш"]="ш", ["Щ"]="щ", ["Ъ"]="ъ",
+    ["Ы"]="ы", ["Ь"]="ь", ["Э"]="э", ["Ю"]="ю", ["Я"]="я"
+}
+
 local function cleanText(str)
     if not str then return "" end
     str = str:lower()
-    local cyrillicUpper = {
-        ["А"]="а", ["Б"]="б", ["В"]="в", ["Г"]="г", ["Д"]="д", ["Е"]="е", ["Ё"]="ё",
-        ["Ж"]="ж", ["З"]="з", ["И"]="и", ["Й"]="й", ["К"]="к", ["Л"]="л", ["М"]="м",
-        ["Н"]="н", ["О"]="о", ["П"]="п", ["Р"]="р", ["С"]="с", ["Т"]="т", ["У"]="у",
-        ["Ф"]="ф", ["Х"]="х", ["Ц"]="ц", ["Ч"]="ч", ["Ш"]="ш", ["Щ"]="щ", ["Ъ"]="ъ",
-        ["Ы"]="ы", ["Ь"]="ь", ["Э"]="э", ["Ю"]="ю", ["Я"]="я"
-    }
     for upperChar, lowerChar in pairs(cyrillicUpper) do
         str = str:gsub(upperChar, lowerChar)
     end
@@ -169,17 +170,20 @@ local function sayMessage(text)
     end)
 end
 
+-- Безопасная проверка приветствий (без сбоев паттернов UTF-8)
 local function isGreeting(cleanMsg)
     local greetings = { "ку", "пр", "привет", "хай", "дратути", "здарова", "салам", "хеллоу", "здаров" }
-    for _, word in ipairs(greetings) do
-        if cleanMsg:find("%f[%a_а-яА-ЯёЁ]" .. word .. "%f[%A_а-яА-ЯёЁ]") or cleanMsg == word then
-            return true
+    for word in cleanMsg:gmatch("[%wа-яёА-ЯЁ]+") do
+        for _, g in ipairs(greetings) do
+            if word == g then
+                return true
+            end
         end
     end
     return false
 end
 
--- Включение/Выключение Рэгдолла
+-- Безопасный Рэгдолл (без отваливания конечностей)
 local function setRagdoll(char, active)
     if not char then return end
     local hum = char:FindFirstChildOfClass("Humanoid")
@@ -188,17 +192,7 @@ local function setRagdoll(char, active)
     if active then
         hum:ChangeState(Enum.HumanoidStateType.Physics)
         hum.PlatformStand = true
-        for _, motor in pairs(char:GetDescendants()) do
-            if motor:IsA("Motor6D") and motor.Name ~= "Neck" then
-                motor.Enabled = false
-            end
-        end
     else
-        for _, motor in pairs(char:GetDescendants()) do
-            if motor:IsA("Motor6D") then
-                motor.Enabled = true
-            end
-        end
         hum.PlatformStand = false
         hum:ChangeState(Enum.HumanoidStateType.GettingUp)
     end
@@ -213,7 +207,7 @@ local function atomicSneeze()
 
     isSneezing = true
 
-    -- Звук чиха (слышат все вокруг)
+    -- Звук чиха
     local sound = hrp:FindFirstChild("AtomicSneeze")
     if sound then
         sound:Play()
@@ -317,7 +311,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ------------------------------------------
--- 1. СТИЛЬНАЯ UI КНОПКА (ТЕМНЫЙ ФОН + DRAGGABLE)
+-- 1. СТИЛЬНАЯ UI КНОПКА (ИСПРАВЛЕННЫЙ DRAG & DROP)
 -- ------------------------------------------
 local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 if playerGui then
@@ -335,7 +329,6 @@ if playerGui then
     ToggleButton.Size = UDim2.new(0, 155, 0, 48)
     ToggleButton.Position = UDim2.new(0.05, 0, 0.3, 0)
     
-    -- 🖤 ТЕМНЫЙ ФОН ДЛЯ ЧЕТКОСТИ ТЕКСТА
     ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 25) 
     ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     ToggleButton.TextSize = 16
@@ -355,7 +348,6 @@ if playerGui then
     UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     UIStroke.Parent = ToggleButton
 
-    -- Стили состояний (ВКЛ - Зеленый неоновый, ВЫКЛ - Красный)
     local styles = {
         On = {
             Text = "ИИ:включен!",
@@ -381,21 +373,25 @@ if playerGui then
         local targetStyle = enabled and styles.On or styles.Off
         ToggleButton.Text = targetStyle.Text
         
-        -- Плавная анимация контура и градиента
         TweenService:Create(UIStroke, tweenInfo, {Color = targetStyle.Stroke}):Play()
         TweenService:Create(UIGradient, tweenInfo, {Color = targetStyle.Gradient}):Play()
     end
 
     updateButtonUI(botActive)
 
-    -- 🖐️ НАДЕДНЫЙ МЕХАНИЗМ ПЕРЕТАСКИВАНИЯ (DRAG & DROP)
+    -- 🖐️ НАДЕЖНЫЙ МЕХАНИЗМ ПЕРЕТАСКИВАНИЯ (FIXED)
     local dragging = false
-    local dragInput, dragStart, startPos
+    local dragStart, startPos
     local hasDragged = false
 
     local function updateDrag(input)
         local delta = input.Position - dragStart
-        ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        ToggleButton.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
     end
 
     ToggleButton.InputBegan:Connect(function(input)
@@ -404,23 +400,11 @@ if playerGui then
             hasDragged = false
             dragStart = input.Position
             startPos = ToggleButton.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    ToggleButton.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             if (input.Position - dragStart).Magnitude > 5 then
                 hasDragged = true
             end
@@ -428,9 +412,18 @@ if playerGui then
         end
     end)
 
-    -- Переключение ИИ по клику (только если не перетаскивали)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    -- Переключение ИИ по клику
     ToggleButton.MouseButton1Click:Connect(function()
-        if hasDragged then return end
+        if hasDragged then 
+            hasDragged = false
+            return 
+        end
         
         botActive = not botActive
         updateButtonUI(botActive)
@@ -580,7 +573,7 @@ safeSpawn(function()
                     safeWait(0.8)
 
                 else
-                    -- 2. ИСПРАВЛЕННЫЙ ВОЗВРАТ НА СПАВН
+                    -- 2. ВОЗВРАТ НА СПАВН
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
 
@@ -640,4 +633,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Скрипт с обновленной кнопкой успешно готов к работе!")
+print("[BOT]: Скрипт с исправленной кнопкой и чатом успешно запущен!")
