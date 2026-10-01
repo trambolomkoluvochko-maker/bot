@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED CHAT LISTENER & MODERN TEXTCHATSERVICE)
+-- LIVE SKIN BOT (FIXED CYRILLIC CHAT & NEW IDLE PHRASES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -28,6 +28,23 @@ local lastChatTime = tick()
 local chatCooldown = math.random(10, 20)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
+
+-- Корректный перевод русского текста в нижний регистр (Фикс Cyrillic :lower())
+local function cleanText(str)
+    if not str then return "" end
+    str = str:lower()
+    local cyrillicUpper = {
+        ["А"]="а", ["Б"]="б", ["В"]="в", ["Г"]="г", ["Д"]="д", ["Е"]="е", ["Ё"]="ё",
+        ["Ж"]="ж", ["З"]="з", ["И"]="и", ["Й"]="й", ["К"]="к", ["Л"]="л", ["М"]="м",
+        ["Н"]="н", ["О"]="о", ["П"]="п", ["Р"]="р", ["С"]="с", ["Т"]="т", ["У"]="у",
+        ["Ф"]="ф", ["Х"]="х", ["Ц"]="ц", ["Ч"]="ч", ["Ш"]="ш", ["Щ"]="щ", ["Ъ"]="ъ",
+        ["Ы"]="ы", ["Ь"]="ь", ["Э"]="э", ["Ю"]="ю", ["Я"]="я"
+    }
+    for upperChar, lowerChar in pairs(cyrillicUpper) do
+        str = str:gsub(upperChar, lowerChar)
+    end
+    return str
+end
 
 -- Обновление позиции спавна
 local function updateSpawnPosition()
@@ -65,10 +82,18 @@ local randomPhrases = {
     "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
     "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
     "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
-    "Уменя черные точки вместо глаз..", "Хотите анекдот? Напишите «расскажи анекдот»", ":0", "Ходилкин бродилкин", 
+    "Уменя черные точки вместо глаз..", 
+    "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
+    ":0", "Ходилкин бродилкин", 
     "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
     "Забавный факт: это и есть забавный факт",
-    "Да емае ну бл ну.. ну бл :["
+    "Да емае ну бл ну.. ну бл :[",
+    "Жить хочу",
+    "Скучные тут все...",
+    "Я не кому не ужин...",
+    "Я во всем виноград",
+    "😶",
+    "🍞"
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
@@ -265,7 +290,7 @@ LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer then return end
     
-    local cleanMsg = msg:lower()
+    local cleanMsg = cleanText(msg)
     local senderChar = senderPlayer.Character
     local char = LocalPlayer.Character
     if not senderChar or not char then return end
@@ -276,7 +301,7 @@ local function processChatMessage(senderPlayer, msg)
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
 
-    -- Проверка команд
+    -- Проверка команд и ключевых слов
     if cleanMsg:find("следуй") or cleanMsg:find("следу") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             followingPlayer = senderPlayer
@@ -288,8 +313,8 @@ local function processChatMessage(senderPlayer, msg)
             followingPlayer = nil
             sayMessage("лан покеда")
         end
-    elseif cleanMsg:find("анекдот") then
-        if dist <= 50 then
+    elseif cleanMsg:find("анекдот") or cleanMsg:find("расскажи") then
+        if dist <= 60 then
             sayMessage(jokesList[math.random(#jokesList)])
         end
     elseif isGreeting(cleanMsg) and dist <= 40 then
@@ -297,7 +322,7 @@ local function processChatMessage(senderPlayer, msg)
     end
 end
 
--- Подключение слушивателя для TextChatService (Современный чат)
+-- Подключение слушателя для TextChatService (Современный чат)
 if TextChatService then
     TextChatService.MessageReceived:Connect(function(textChatMessage)
         local textSource = textChatMessage.TextSource
