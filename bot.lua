@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + ANTI-CART)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + ANTI-CART + PASCHAL)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -59,7 +59,7 @@ local function cleanText(str)
     return str
 end
 
--- Настройка громкого 3D звука чиха
+-- Звук чиха
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -76,6 +76,26 @@ local function setupSneezeSound(char)
         sneezeSound.RollOffMode = Enum.RollOffMode.Linear
         sneezeSound.Parent = hrp
     end
+end
+
+-- Воспроизведение звука кассеты Джекета (Hotline Miami)
+local function playJacketTapeSound()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    local snd = hrp:FindFirstChild("JacketTapeSound")
+    if not snd then
+        snd = Instance.new("Sound")
+        snd.Name = "JacketTapeSound"
+        snd.SoundId = "rbxassetid://136146723278872"
+        snd.Volume = 4.0
+        snd.RollOffMinDistance = 25
+        snd.RollOffMaxDistance = 150
+        snd.RollOffMode = Enum.RollOffMode.Linear
+        snd.Parent = hrp
+    end
+    snd:Play()
 end
 
 local function updateSpawnPosition()
@@ -101,7 +121,16 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Расширенный список анекдотов
+-- Фразы при побеге от тележки/машины
+local cartEscapePhrases = {
+    "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
+    "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
+    "НУ НАФ",
+    "НЕТ НЕТ НЕЕЕТ!",
+    "Я СВАЛИВАЮ!"
+}
+
+-- Анекдоты
 local jokesList = {
     "Заходит бот в бар, а бармен ему: 'Служба поддержки в соседнем здании!'",
     "Почему программисты любят темную тему? Свет привлекает багов!",
@@ -136,7 +165,9 @@ local randomPhrases = {
     ":0", "Ходилкин бродилкин", 
     "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
     "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", "Скучные тут все...",
-    "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞"
+    "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
+    "Скучно.. скучно.. идешь такой бродишь куда глаза глядат..",
+    "Почему все думают боты в рб злые? Все не так же плохо.."
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
@@ -147,7 +178,7 @@ local playerStarePhrases = {
     "Вы игроки всегда так.. наряживаетесь?", "Кал переделывай", "Живой нет?"
 }
 
--- Отправка сообщений в чат
+-- Чат
 local function sayMessage(text)
     if not text or text == "" then return end
     safeSpawn(function()
@@ -226,12 +257,11 @@ local function atomicSneeze()
     isSneezing = false
 end
 
--- Обнаружение угроз (тележки, машины, сиденья, летящие физические предметы и игроки)
+-- Обнаружение угроз спереди
 local function isThreatInFront(hrp)
     if not hrp then return false end
     local char = LocalPlayer.Character
 
-    -- 1. Проверка физических объектов (тележки, сиденья, неанкоренные модели)
     local checkCF = hrp.CFrame * CFrame.new(0, 0, -8)
     local overlapParams = OverlapParams.new()
     overlapParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -257,7 +287,6 @@ local function isThreatInFront(hrp)
         end
     end
 
-    -- 2. Проверка игроков прямо спереди
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local pHrp = player.Character.HumanoidRootPart
@@ -378,7 +407,6 @@ local function updateUIState(active)
     end
 end
 
--- Перетаскивание и клик
 local dragging = false
 local dragMoved = false
 local dragStart, startPos
@@ -468,7 +496,6 @@ local function processChatMessage(senderPlayer, msg)
     elseif cleanMsg:find("следуй") or cleanMsg:find("следу") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             lastResponseTime = tick()
-            -- Лимит 1/1: Если бот уже за кем-то идет, отказываем другим игрокам
             if followingPlayer and followingPlayer ~= senderPlayer then
                 sayMessage("сорян, я уже хожу за другим!")
             else
@@ -515,7 +542,7 @@ for _, p in ipairs(Players:GetPlayers()) do
     end
 end
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
+    if p ~= LocalPlayer me
         p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
     end
 end)
@@ -537,14 +564,15 @@ safeSpawn(function()
                 if math.random(1, 35) == 1 then
                     atomicSneeze()
 
-                -- 2. Побег от тележки/машины/угрозы спереди
+                -- 2. Побег от тележки/машины/угрозы + новые крики
                 elseif isThreatInFront(hrp) then
                     local escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 18)
                     hum:MoveTo(escapeTarget)
+                    sayMessage(cartEscapePhrases[math.random(#cartEscapePhrases)])
                     if math.random(1, 2) == 1 then hum.Jump = true end
                     safeWait(1.2)
 
-                -- 3. Режим «Следовать за игроком» (ПОЛНОСТЬЮ ОТКЛЮЧАЕТ АЙДЛ-РЕЖИМ)
+                -- 3. Режим «Следовать за игроком» (ПЛАВНАЯ ОСТАНОВКА БЕЗ ДЕРГАНИЯ)
                 elseif followingPlayer then
                     local targetChar = followingPlayer.Character
                     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -553,26 +581,28 @@ safeSpawn(function()
                     if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
                         local dist = (targetHrp.Position - hrp.Position).Magnitude
 
-                        -- Игрок слишком далеко (убежал)
+                        -- Убежал слишком далеко
                         if dist > 130 then
                             sayMessage("ну знаешь чел я не флеш как ты так что адиос")
                             followingPlayer = nil
                             safeWait(1)
-                        -- Игрок идет/бежит
-                        elseif dist > 7 then
+                        -- Игрок идет
+                        elseif dist > 7.5 then
                             hum:MoveTo(targetHrp.Position)
                             if math.random(1, 12) == 1 then hum.Jump = true end
-                        -- Игрок остановился (бот останавливается рядом и смотрит)
+                        -- Игрок остановился (Бот замирает и просто смотрим на него, БЕЗ постоянного MoveTo)
                         else
-                            hum:MoveTo(hrp.Position)
-                            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z))
+                            local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
+                            if (hrp.Position - lookPos).Magnitude > 0.1 then
+                                hrp.CFrame = CFrame.lookAt(hrp.Position, lookPos)
+                            end
                         end
                     else
                         followingPlayer = nil
                     end
-                    safeWait(0.3)
+                    safeWait(0.2)
 
-                -- 4. Автономный режим бездельничества (только если НЕ идет за игроком)
+                -- 4. Автономный режим бездельничества
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
@@ -586,12 +616,11 @@ safeSpawn(function()
                     else
                         local actionChance = math.random(1, 10)
 
-                        -- Вариант 1 (20%): Режим наблюдения (молча смотрит ~8 секунд на игрока вдалеке)
+                        -- Режим наблюдения (смотрит 8 сек)
                         if actionChance <= 2 then
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                                 local tHrp = targetChar.HumanoidRootPart
-                                hum:MoveTo(hrp.Position) -- остановка
                                 local observeStart = tick()
 
                                 while tick() - observeStart < 8 and botActive and not isSneezing and not followingPlayer do
@@ -605,7 +634,7 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        -- Вариант 2 (10%): Подойти к игроку и сказать фразу
+                        -- Подойти к игроку и сказать фразу
                         elseif actionChance == 3 then
                             local targetChar = getNearestPlayer(0, 35)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -623,16 +652,16 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        -- Вариант 3 (30%): Обычная прогулка
+                        -- Прогулка
                         elseif actionChance <= 6 then
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                             safeWait(math.random(3, 7))
 
-                        -- Вариант 4 (30%): Пауза / стояние на месте
+                        -- Стояние на месте
                         elseif actionChance <= 9 then
                             safeWait(math.random(4, 8))
 
-                        -- Вариант 5 (10%): Использование предмета из инвентаря
+                        -- Использование предмета
                         else
                             useRandomItem()
                             safeWait(math.random(2, 4))
@@ -640,9 +669,15 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические случайные реплики (работают и при блуждании, и во время следования)
+                -- 5. Периодические фразы (включая редкую пасхалку Джекета)
                 if tick() - lastChatTime >= chatCooldown then
-                    sayMessage(randomPhrases[math.random(#randomPhrases)])
+                    -- Шанс 1 из 40 выбить редкую кассету Джекета из Hotline Miami
+                    if math.random(1, 40) == 1 then
+                        playJacketTapeSound()
+                        sayMessage("do you know what time it is?")
+                    else
+                        sayMessage(randomPhrases[math.random(#randomPhrases)])
+                    end
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
                 end
