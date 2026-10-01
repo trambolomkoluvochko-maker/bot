@@ -1,10 +1,9 @@
 -- ==========================================
--- LIVE SKIN BOT (DELTA / MOBILE FIXED)
+-- LIVE SKIN BOT (FIXED MOVEMENT & DIALOGUES)
 -- ==========================================
 
 print("[BOT]: Запуск скрипта...")
 
--- Безопасные функции времени и задержек
 local safeWait = task and task.wait or wait
 local safeSpawn = task and task.spawn or function(f, ...) return coroutine.wrap(f)(...) end
 
@@ -51,24 +50,26 @@ local jokesList = {
     "Почему программисты любят темную тему? Потому что свет привлекает багов!",
     "Заходит робот в магазин: — Мне, пожалуйста, банку масла. — С вас 100 рублей. — А подешевле есть? — Есть, но оно с багами!",
     "Учитель: 'Иван, почему ты разговариваешь с ботом?' Иван: 'Он хотя бы слушает мои аргументы!'",
-    "Знаете почему роботы не умеют врать? Код не позволяет, а вот люди — запросто!"
+    "Знаете почему роботы не умеют врать? Код не позволяет, а вот люди — запросто!",
+    "Разговаривают два бота: — Ты веришь в людей? — Не, это просто миф для школьников."
 }
 
 local greetingResponses = { "?", "Даров", "Досвидание", "Прив" }
 
 local randomPhrases = {
-    "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "хмм...", 
-    "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "так себе местечко", 
-    "Чат живой надеюсь?..", "Да я простой бот и че?", "СКУЧНААА", 
-    "Обэмэ", "Уменя черные точки вместо глаз..", "Хотите анекдот? Напишите «расскажи анекдот»", 
-    "Ходилкин бродилкин", "Боты тоже как люди", "UwU", "Мир так жесток.."
+    "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересного чем этот сервер", "хмм...", 
+    "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
+    "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
+    "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
+    "Уменя черные точки вместо глаз..", "Хотите анекдот? Напишите «расскажи анекдот»", ":0", "Ходилкин бродилкин", 
+    "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток.."
 }
 
-local escapePhrases = { "НЕ НЕ НЕ", "НЕНАДО", "АААА ОТСТАНЬ", "Я УБЕГАЮ!", "ДАЖЕ НЕ ДУМАЙ", "НЕ ПОЙМАЕШЬ!" }
-local seatReactionPhrases = { "че думал на меня это сработает?", "ДОСТАЛ БЛ", "Нет.", "Не такое не прокатит" }
-local playerStarePhrases = { "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", "._.", "Выглядишь странно..", "Бу" }
+local escapePhrases = { "НЕ НЕ НЕ", "НЕНАДО", "АААА ОТСТАНЬ", "Я УБЕГАЮ!", "ДАЖЕ НЕ ДУМАЙ", "ОЙ ОЙ ОЙ МЕНЯ СЕЙЧАС СКУШАЮТ", "НЕ ПОЙМАЕШЬ!", "ДА ЧЕ Я ТЕБЕ ЗДЕЛАЛ?!?", "0______0" }
+local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
+local playerStarePhrases = { "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу" }
 
--- Безопасная отправка в чат
+-- Отправка сообщений в чат
 local function sayMessage(text)
     safeSpawn(function()
         pcall(function()
@@ -97,16 +98,57 @@ local function isGreetingWord(msg)
     return false
 end
 
--- ------------------------------------------
--- 1. Создание GUI (Гарантированное отображение)
--- ------------------------------------------
-local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
-if not playerGui then
-    warn("[BOT ERROR]: PlayerGui не найден!")
-    return
+-- Поиск игроков в диапазоне дистанции
+local function getNearestPlayer(minDist, maxDist)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = char.HumanoidRootPart.Position
+    local nearest, closestDist = nil, maxDist or 35
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
+            if dist >= (minDist or 0) and dist <= closestDist then
+                closestDist = dist
+                nearest = player.Character
+            end
+        end
+    end
+    return nearest
 end
 
--- Удаляем старое GUI, если оно было
+-- Использование предметов из инвентаря
+local function useRandomItem()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local tools = {}
+    if backpack then
+        for _, item in ipairs(backpack:GetChildren()) do
+            if item:IsA("Tool") then table.insert(tools, item) end
+        end
+    end
+
+    if #tools > 0 then
+        local randomTool = tools[math.random(#tools)]
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:EquipTool(randomTool)
+            safeWait(0.4)
+            randomTool:Activate()
+            safeWait(math.random(1, 2))
+            hum:UnequipTools()
+        end
+    end
+end
+
+-- ------------------------------------------
+-- 1. GUI
+-- ------------------------------------------
+local playerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
+if not playerGui then return end
+
 local oldGui = playerGui:FindFirstChild("LiveBotCanavaGui")
 if oldGui then oldGui:Destroy() end
 
@@ -114,8 +156,6 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "LiveBotCanavaGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
-
--- На Delta/Mobile безопаснее всего ставить GUI прямо в PlayerGui
 ScreenGui.Parent = playerGui
 
 local ToggleButton = Instance.new("TextButton")
@@ -134,7 +174,6 @@ local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 8)
 UICorner.Parent = ToggleButton
 
--- Перетаскивание кнопки (Touch & Mouse)
 local dragging, dragStart, startPos
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -158,7 +197,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ------------------------------------------
--- 2. Логика бота
+-- 2. Логика и Поведение
 -- ------------------------------------------
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
@@ -302,24 +341,60 @@ safeSpawn(function()
                             followingPlayer = nil
                         end
                     else
-                        -- Обычные случайные действия
-                        local rnd = math.random(1, 10)
-                        if rnd <= 6 then
+                        -- Распределение действий бота
+                        local actionChance = math.random(1, 10)
+
+                        if actionChance <= 4 then
+                            -- 1. Случайная ходьба с паузой
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                        elseif rnd <= 8 then
-                            -- Посмотреть на ближайшего игрока
-                            for _, p in ipairs(Players:GetPlayers()) do
-                                if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                                    local pPos = p.Character.HumanoidRootPart.Position
-                                    if (pPos - hrp.Position).Magnitude < 30 then
-                                        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(pPos.X, hrp.Position.Y, pPos.Z))
+                            safeWait(math.random(3, 5)) -- Задержка, чтобы он не бегал без остановки
+
+                        elseif actionChance <= 6 then
+                            -- 2. Смотреть на дальнего игрока (25 - 110 studs)
+                            local distantChar = getNearestPlayer(25, 110)
+                            if distantChar and distantChar:FindFirstChild("HumanoidRootPart") then
+                                hum:MoveTo(hrp.Position) -- Остановиться
+                                local startTime = tick()
+                                while botActive and not followingPlayer and (tick() - startTime < 6) do
+                                    if distantChar and distantChar:FindFirstChild("HumanoidRootPart") and hrp then
+                                        local targetPos = distantChar.HumanoidRootPart.Position
+                                        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetPos.X, hrp.Position.Y, targetPos.Z))
+                                    else
                                         break
+                                    end
+                                    safeWait(0.1)
+                                end
+                            else
+                                useRandomItem()
+                            end
+                            safeWait(1)
+
+                        elseif actionChance <= 8 then
+                            -- 3. Подойти к игроку неподалеку и заговорить
+                            local targetChar = getNearestPlayer(0, 30)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                safeMoveTo(targetChar.HumanoidRootPart.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                safeWait(1.5)
+                                
+                                if hrp and targetChar:FindFirstChild("HumanoidRootPart") then
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetChar.HumanoidRootPart.Position.X, hrp.Position.Y, targetChar.HumanoidRootPart.Position.Z))
+                                    
+                                    -- Озвучить фразу при взгляде
+                                    if math.random(1, 10) <= 7 then
+                                        local starePhrase = playerStarePhrases[math.random(#playerStarePhrases)]
+                                        sayMessage(starePhrase)
                                     end
                                 end
                             end
+                            safeWait(math.random(2, 4))
+
+                        else
+                            -- 4. Использование предметов
+                            useRandomItem()
+                            safeWait(2)
                         end
 
-                        -- Фоновый чат
+                        -- Фоновый автономный чат
                         if tick() - lastChatTime >= chatCooldown then
                             sayMessage(randomPhrases[math.random(#randomPhrases)])
                             lastChatTime = tick()
@@ -351,4 +426,4 @@ ToggleButton.MouseButton1Click:Connect(function()
     end
 end)
 
-print("[BOT]: Скрипт успешно загружен! Нажми красную кнопку на экране.")
+print("[BOT]: Скрипт успешно загружен!")
