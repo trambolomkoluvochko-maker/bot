@@ -354,7 +354,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱️ UI ИНТЕРФЕЙС
+-- 🖱 UI ИНТЕРФЕЙС
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -541,8 +541,9 @@ for _, p in ipairs(Players:GetPlayers()) do
         p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
     end
 end
+
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer me
+    if p ~= LocalPlayer then
         p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
     end
 end)
