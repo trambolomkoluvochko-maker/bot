@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (CLASSIC SINGLE BUTTON + FIX)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + AUDIBLE SOUND)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -59,7 +59,7 @@ local function cleanText(str)
     return str
 end
 
--- Звук чиха
+-- Настройка громкого 3D звука чиха
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -70,9 +70,10 @@ local function setupSneezeSound(char)
         local sneezeSound = Instance.new("Sound")
         sneezeSound.Name = "AtomicSneeze"
         sneezeSound.SoundId = "rbxassetid://75348227771086"
-        sneezeSound.Volume = 2.5
-        sneezeSound.RollOffMaxDistance = 150
-        sneezeSound.RollOffMinDistance = 10
+        sneezeSound.Volume = 5.0
+        sneezeSound.RollOffMinDistance = 40
+        sneezeSound.RollOffMaxDistance = 250
+        sneezeSound.RollOffMode = Enum.RollOffMode.Linear
         sneezeSound.Parent = hrp
     end
 end
@@ -286,7 +287,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱️ ОДНОРОДНАЯ КНОПКА С ТОЧНЫМ КЛИКОМ
+-- 🖱️ UI ИНТЕРФЕЙС
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -339,7 +340,7 @@ local function updateUIState(active)
     end
 end
 
--- ЛОГИКА ПЕРЕТАСКИВАНИЯ И КЛИКА
+-- Перетаскивание и клик
 local dragging = false
 local dragMoved = false
 local dragStart, startPos
@@ -391,7 +392,7 @@ end)
 -- Anti-Sit
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
-    if not humanoid then return end
+    if not humanoid me then end
 
     humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
         if botActive and humanoid.Sit then
@@ -485,27 +486,39 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
+                -- 1. Случайное чихание
                 if math.random(1, 35) == 1 then
                     atomicSneeze()
 
+                -- 2. Реакция на препятствие/угрозу спереди
                 elseif isThreatInFront(hrp) then
                     local escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 18)
                     hum:MoveTo(escapeTarget)
                     if math.random(1, 2) == 1 then hum.Jump = true end
                     safeWait(1.2)
 
+                -- 3. Режим «Следовать за игроком»
                 elseif followingPlayer then
                     local targetChar = followingPlayer.Character
-                    if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                        local targetHrp = targetChar.HumanoidRootPart
-                        if (targetHrp.Position - hrp.Position).Magnitude > 6 then
+                    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+                    if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
+                        local dist = (targetHrp.Position - hrp.Position).Magnitude
+
+                        if dist > 7 then
                             hum:MoveTo(targetHrp.Position)
+                            if math.random(1, 12) == 1 then hum.Jump = true end
+                        else
+                            hum:MoveTo(hrp.Position)
+                            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z))
                         end
                     else
                         followingPlayer = nil
                     end
-                    safeWait(0.8)
+                    safeWait(0.3)
 
+                -- 4. Автономное блуждание
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
@@ -548,13 +561,15 @@ safeSpawn(function()
                             safeWait(math.random(2, 4))
                         end
                     end
-
-                    if tick() - lastChatTime >= chatCooldown then
-                        sayMessage(randomPhrases[math.random(#randomPhrases)])
-                        lastChatTime = tick()
-                        chatCooldown = math.random(12, 25)
-                    end
                 end
+
+                -- 5. Периодические случайные реплики (работают и при блуждании, и во время следования)
+                if tick() - lastChatTime >= chatCooldown then
+                    sayMessage(randomPhrases[math.random(#randomPhrases)])
+                    lastChatTime = tick()
+                    chatCooldown = math.random(12, 25)
+                end
+
             end
         end
     end
