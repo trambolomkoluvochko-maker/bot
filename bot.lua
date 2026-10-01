@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (ACTIVE MOVEMENT, SPAWN RETURN & FIXED CHAT)
+-- LIVE SKIN BOT (NATURAL MOVEMENT & NEW PHRASES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -66,14 +66,25 @@ local randomPhrases = {
     "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
     "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
     "Уменя черные точки вместо глаз..", "Хотите анекдот? Напишите «расскажи анекдот»", ":0", "Ходилкин бродилкин", 
-    "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток.."
+    "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
+    "Забавный факт: это и есть забавный факт",
+    "Да емае ну бл ну.. ну бл :["
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
-local playerStarePhrases = { "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу" }
+
+local playerStarePhrases = { 
+    "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
+    "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", 
+    "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу",
+    "Вы игроки всегда так.. наряживаетесь?",
+    "Кал переделывай",
+    "Живой нет?"
+}
+
 local spawnReturnPhrases = { "Ладно, пойду на спавн отдохну", "Возвращаюсь на спавн...", "Опять на спавн пилить..", "Пойду посижу у спавна" }
 
--- Отправка сообщений в чат (Гарантированная доставка)
+-- Отправка сообщений в чат
 local function sayMessage(text)
     if not text or text == "" then return end
     safeSpawn(function()
@@ -141,7 +152,7 @@ local function useRandomItem()
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then
             hum:EquipTool(randomTool)
-            safeWait(0.3)
+            safeWait(0.4)
             randomTool:Activate()
             safeWait(0.8)
             hum:UnequipTools()
@@ -156,7 +167,7 @@ local function safeMoveTo(targetPos)
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hum then return end
 
-    if math.random(1, 4) == 1 then hum.Jump = true end
+    if math.random(1, 5) == 1 then hum.Jump = true end
     hum:MoveTo(targetPos)
 end
 
@@ -320,57 +331,60 @@ safeSpawn(function()
                     end
                     safeWait(0.8)
                 else
-                    -- 2. Проверка возврата на спавн (если слишком далеко или рандомный выбор)
+                    -- 2. Проверка возврата на спавн
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
-                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 12) == 12 and distFromSpawn > 25)
+                    local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 15) == 15 and distFromSpawn > 30)
 
                     if shouldReturnSpawn then
                         safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
                         if math.random(1, 2) == 1 then
                             sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
                         end
-                        safeWait(2)
+                        safeWait(math.random(3, 6)) -- Задержка отдыха после возвращения
                     else
-                        -- 3. Обычное активное передвижение
+                        -- 3. Обычное активное поведение (Сбалансированное)
                         local actionChance = math.random(1, 10)
 
-                        if actionChance <= 4 then
-                            -- Обычный случайный шаг рядом
-                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                            safeWait(1.2)
-
-                        elseif actionChance <= 8 then
-                            -- Подход к ближайшему игроку и произнесение фразы
-                            local targetChar = getNearestPlayer(0, 45)
+                        if actionChance == 1 then
+                            -- [РЕДКО - 10%] Подход к ближайшему игроку
+                            local targetChar = getNearestPlayer(0, 40)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                                 local tHrp = targetChar.HumanoidRootPart
                                 safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                                safeWait(1)
+                                safeWait(1.5)
 
-                                -- Поворот к игроку и БЕЗУСЛОВНАЯ отправка реплики
                                 if hrp and tHrp then
                                     hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
                                     sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
                                 end
-                                safeWait(1.2)
+                                safeWait(math.random(3, 6)) -- Таймер отдыха после подхода
                             else
-                                -- Если рядом никого нет — пройтись дальше
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-25, 25), 0, math.random(-25, 25)))
-                                safeWait(1)
+                                -- Если игроков рядом нет — просто прогулка
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(2, 5))
                             end
 
+                        elseif actionChance <= 6 then
+                            -- [ЧАСТО - 50%] Обычная случайная прогулка с естественной паузой
+                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                            safeWait(math.random(3, 7)) -- Бот стоит и отдыхает после шага
+
+                        elseif actionChance <= 9 then
+                            -- [30%] Пауза на месте (просто стоит как обычный игрок)
+                            safeWait(math.random(4, 8))
+
                         else
-                            -- Использование предмета
+                            -- [10%] Использование предмета
                             useRandomItem()
-                            safeWait(1)
+                            safeWait(math.random(2, 4))
                         end
                     end
 
-                    -- Автономный фоновый чат
+                    -- Фоновый чат
                     if tick() - lastChatTime >= chatCooldown then
                         sayMessage(randomPhrases[math.random(#randomPhrases)])
                         lastChatTime = tick()
-                        chatCooldown = math.random(12, 22)
+                        chatCooldown = math.random(12, 25)
                     end
                 end
             end
