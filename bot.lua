@@ -59,7 +59,7 @@ local function cleanText(str)
     return str
 end
 
--- Звук чиха (Громкий, как ты любишь: 5.0)
+-- Звук чиха (Громкий: 5.0)
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -78,7 +78,7 @@ local function setupSneezeSound(char)
     end
 end
 
--- Звук кассеты Джекета (Новая комфортная громкость: 1.0)
+-- Звук кассеты Джекета (Комфортная громкость: 1.0)
 local function playJacketTapeSound()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -156,7 +156,7 @@ local spawnReturnPhrases = {
 }
 
 local randomPhrases = {
-    "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересного чем этот сервер", "хмм...", 
+    "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересных серверов чем этот..", "хмм...", 
     "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
     "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
     "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
@@ -164,9 +164,9 @@ local randomPhrases = {
     "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
     ":0", "Ходилкин бродилкин", 
     "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
-    "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", "Скучные тут все...",
+    "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", "Скучные тут все..",
     "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
-    "Скучно.. скучно.. идешь такой бродишь куда глаза глядат..",
+    "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..",
     "Почему все думают боты в рб злые? Все не так же плохо.."
 }
 
@@ -244,7 +244,7 @@ local function atomicSneeze()
     isSneezing = false
 end
 
--- Точная проверка: бежит ли игрок С ТЕЛЕЖКОЙ/ПРЕДМЕТОМ С СИДЕНЬЕМ прямо на бота
+-- Проверка тележек/сидений у игроков
 local function checkCartThreat(hrp)
     if not hrp then return nil, nil end
     
@@ -255,12 +255,8 @@ local function checkCartThreat(hrp)
             
             if pHrp and pHum and pHum.Health > 0 then
                 local dist = (pHrp.Position - hrp.Position).Magnitude
-                -- Если игрок подошел ближе чем на 12 студов
                 if dist <= 12 then
-                    -- Проверяем, есть ли у игрока в руках/на персонаже предмет с сиденьем (тележка и т.д.)
                     local hasSeatItem = false
-                    
-                    -- Проверяем персонажа (одежду, инструмент в руках, дочерние объекты)
                     for _, desc in ipairs(player.Character:GetDescendants()) do
                         if desc:IsA("Seat") or desc:IsA("VehicleSeat") then
                             hasSeatItem = true
@@ -270,7 +266,7 @@ local function checkCartThreat(hrp)
                     
                     if hasSeatItem then
                         local localPos = hrp.CFrame:PointToObjectSpace(pHrp.Position)
-                        local isFront = localPos.Z < 0 -- Если Z < 0, то игрок спереди
+                        local isFront = localPos.Z < 0
                         return pHrp.Position, isFront
                     end
                 end
@@ -547,19 +543,17 @@ safeSpawn(function()
                     atomicSneeze()
 
                 else
-                    -- Проверяем, бежит ли игрок с тележкой/предметом с сиденьем
+                    -- Проверяем, бежит ли игрок с тележкой
                     local threatPos, isFront = checkCartThreat(hrp)
 
-                    -- 2. Побег (Спереди -> Назад, Сзади -> Вперед, Скорость = 32)
+                    -- 2. Побег
                     if threatPos ~= nil then
-                        hum.WalkSpeed = 32 -- Увеличиваем скорость до 32
+                        hum.WalkSpeed = 32
 
                         local escapeTarget
                         if isFront then
-                            -- Игрок с тележкой СПЕРЕДИ -> убегаем НАЗАД
                             escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 28)
                         else
-                            -- Игрок с тележкой СЗАДИ -> убегаем ВПЕРЕД
                             escapeTarget = hrp.Position + (hrp.CFrame.LookVector * 28)
                         end
 
@@ -568,7 +562,7 @@ safeSpawn(function()
                         if math.random(1, 2) == 1 then hum.Jump = true end
 
                         safeWait(1.2)
-                        hum.WalkSpeed = 16 -- Возвращаем нормальную скорость
+                        hum.WalkSpeed = 16
 
                     -- 3. Режим «Следовать за игроком»
                     elseif followingPlayer then
@@ -611,7 +605,6 @@ safeSpawn(function()
                         else
                             local actionChance = math.random(1, 10)
 
-                            -- Наблюдение за близким игроком (8 секунд)
                             if actionChance <= 2 then
                                 local targetChar = getNearestPlayer(12, 55)
                                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -629,7 +622,6 @@ safeSpawn(function()
                                     safeWait(math.random(2, 5))
                                 end
 
-                            -- Подойти к игроку и сказать фразу
                             elseif actionChance == 3 then
                                 local targetChar = getNearestPlayer(0, 35)
                                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -647,16 +639,13 @@ safeSpawn(function()
                                     safeWait(math.random(2, 5))
                                 end
 
-                            -- Прогулка
                             elseif actionChance <= 6 then
                                 safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                                 safeWait(math.random(3, 7))
 
-                            -- Стояние на месте
                             elseif actionChance <= 9 then
                                 safeWait(math.random(4, 8))
 
-                            -- Использование предмета из инвентаря
                             else
                                 useRandomItem()
                                 safeWait(math.random(2, 4))
@@ -665,7 +654,7 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические фразы (включая редкую кассету Джекета)
+                -- 5. Периодические фразы
                 if tick() - lastChatTime >= chatCooldown then
                     if math.random(1, 40) == 1 then
                         playJacketTapeSound()
