@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + PRECISE CART ESCAPE + PASCHAL)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + SMOOTH OBSERVE + SPAWN TOGGLE + NEW PHRASES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -34,6 +34,7 @@ local function getGuiParent()
 end
 
 local botActive = false
+local returnToSpawnActive = true -- Переключатель возвращения на спавн
 local isSneezing = false
 local lastChatTime = tick()
 local lastResponseTime = 0
@@ -121,13 +122,17 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Фразы при побеге от тележки
+-- Новые и старые фразы при побеге от тележки
 local cartEscapePhrases = {
     "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
     "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
     "НУ НАФ",
     "НЕТ НЕТ НЕЕЕТ!",
-    "Я СВАЛИВАЮ!"
+    "Я СВАЛИВАЮ!",
+    "ДА ЧТО Я ТЕБЕ ЗДЕЛАЛ?!?",
+    "КЫШ КЫШ!",
+    "ноу ноу ноу мистер плеер",
+    "Э"
 }
 
 -- Анекдоты
@@ -167,7 +172,15 @@ local randomPhrases = {
     "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", "Скучные тут все..",
     "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
     "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..",
-    "Почему все думают боты в рб злые? Все не так же плохо.."
+    "Почему все думают боты в рб злые? Все не так же плохо..",
+    "Если закрыть глаза то станет темно",
+    "Если грустишь.. не грусти",
+    "А куда подевались то все?..",
+    "Этот прицел просто имба!",
+    "Cheeki breeki..",
+    "Да уж..",
+    "я НЕ из плейса \"внизу канава 2\"!",
+    "Я за малиной кто сомной?.. никто?.."
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
@@ -331,7 +344,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 UI ИНТЕРФЕЙС
+-- 🖱 UI ИНТЕРФЕЙС (ГЛАВНАЯ КНОПКА + КНОПКА СПАВНА)
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -347,6 +360,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
+-- Главная кнопка активации ИИ
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "BotButton"
 ToggleButton.Size = UDim2.new(0, 160, 0, 48)
@@ -368,6 +382,28 @@ BtnStroke.Thickness = 2
 BtnStroke.Color = Color3.fromRGB(255, 60, 60)
 BtnStroke.Parent = ToggleButton
 
+-- Дополнительная кнопка переключения возвращения на спавн (прикреплена снизу)
+local SpawnToggleBtn = Instance.new("TextButton")
+SpawnToggleBtn.Name = "SpawnToggleBtn"
+SpawnToggleBtn.Size = UDim2.new(0, 160, 0, 32)
+SpawnToggleBtn.Position = UDim2.new(0.05, 0, 0.4, 54)
+SpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 55)
+SpawnToggleBtn.Text = "🏠 Спавн: ВКЛ"
+SpawnToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+SpawnToggleBtn.TextSize = 12
+SpawnToggleBtn.Font = Enum.Font.FredokaOne
+SpawnToggleBtn.Active = true
+SpawnToggleBtn.Parent = ScreenGui
+
+local SpawnCorner = Instance.new("UICorner")
+SpawnCorner.CornerRadius = UDim.new(0, 10)
+SpawnCorner.Parent = SpawnToggleBtn
+
+local SpawnStroke = Instance.new("UIStroke")
+SpawnStroke.Thickness = 1.5
+SpawnStroke.Color = Color3.fromRGB(60, 150, 255)
+SpawnStroke.Parent = SpawnToggleBtn
+
 local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local function updateUIState(active)
@@ -384,9 +420,24 @@ local function updateUIState(active)
     end
 end
 
+local function updateSpawnBtnState(enabled)
+    if enabled then
+        SpawnToggleBtn.Text = "🏠 Спавн: ВКЛ"
+        SpawnToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
+        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(15, 35, 55)}):Play()
+        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(60, 150, 255)}):Play()
+    else
+        SpawnToggleBtn.Text = "🏠 Спавн: ВЫКЛ"
+        SpawnToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
+        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(100, 100, 100)}):Play()
+    end
+end
+
+-- Логика перетаскивания всего блока за главную кнопку
 local dragging = false
 local dragMoved = false
-local dragStart, startPos
+local dragStart, startPos, spawnStartPos
 
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -394,6 +445,7 @@ ToggleButton.InputBegan:Connect(function(input)
         dragMoved = false
         dragStart = input.Position
         startPos = ToggleButton.Position
+        spawnStartPos = SpawnToggleBtn.Position
     end
 end)
 
@@ -407,6 +459,12 @@ UserInputService.InputChanged:Connect(function(input)
                 startPos.X.Offset + delta.X, 
                 startPos.Y.Scale, 
                 startPos.Y.Offset + delta.Y
+            )
+            SpawnToggleBtn.Position = UDim2.new(
+                spawnStartPos.X.Scale, 
+                spawnStartPos.X.Offset + delta.X, 
+                spawnStartPos.Y.Scale, 
+                spawnStartPos.Y.Offset + delta.Y
             )
         end
     end
@@ -430,6 +488,11 @@ ToggleButton.MouseButton1Click:Connect(function()
             print("[BOT]: ИИ выключен!")
         end
     end
+end)
+
+SpawnToggleBtn.MouseButton1Click:Connect(function()
+    returnToSpawnActive = not returnToSpawnActive
+    updateSpawnBtnState(returnToSpawnActive)
 end)
 
 -- Anti-Sit
@@ -583,7 +646,8 @@ safeSpawn(function()
                             else
                                 local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
                                 if (hrp.Position - lookPos).Magnitude > 0.1 then
-                                    hrp.CFrame = CFrame.lookAt(hrp.Position, lookPos)
+                                    -- Плавный поворот в режиме следования
+                                    hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, lookPos), 0.2)
                                 end
                             end
                         else
@@ -593,8 +657,9 @@ safeSpawn(function()
 
                     -- 4. Автономный режим бездельничества
                     else
+                        -- Учитываем переключатель возвращения на спавн
                         local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
-                        local shouldReturnSpawn = distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50)
+                        local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
 
                         if shouldReturnSpawn then
                             safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
@@ -605,6 +670,7 @@ safeSpawn(function()
                         else
                             local actionChance = math.random(1, 10)
 
+                            -- ПЛАВНЫЙ РЕЖИМ НАБЛЮДЕНИЯ (используем Lerp для мягкого поворота вместо резкого дергания)
                             if actionChance <= 2 then
                                 local targetChar = getNearestPlayer(12, 55)
                                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -613,9 +679,10 @@ safeSpawn(function()
 
                                     while tick() - observeStart < 8 and botActive and not isSneezing and not followingPlayer do
                                         if tHrp and hrp then
-                                            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                            local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
                                         end
-                                        safeWait(0.2)
+                                        safeWait(0.05)
                                     end
                                 else
                                     safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
@@ -630,7 +697,8 @@ safeSpawn(function()
                                     safeWait(1.5)
 
                                     if hrp and tHrp then
-                                        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                        hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
                                         sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
                                     end
                                     safeWait(math.random(3, 6))
