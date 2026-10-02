@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + SMOOTH OBSERVE + SPAWN TOGGLE + NEW PHRASES)
+-- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + FIXED CHANCE + SPAWN PRIORITY)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -34,7 +34,7 @@ local function getGuiParent()
 end
 
 local botActive = false
-local returnToSpawnActive = true -- Переключатель возвращения на спавн
+local returnToSpawnActive = true
 local isSneezing = false
 local lastChatTime = tick()
 local lastResponseTime = 0
@@ -122,7 +122,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Новые и старые фразы при побеге от тележки
+-- Фразы при побеге от тележки
 local cartEscapePhrases = {
     "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
     "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
@@ -382,7 +382,7 @@ BtnStroke.Thickness = 2
 BtnStroke.Color = Color3.fromRGB(255, 60, 60)
 BtnStroke.Parent = ToggleButton
 
--- Дополнительная кнопка переключения возвращения на спавн (прикреплена снизу)
+-- Дополнительная кнопка переключения возвращения на спавн
 local SpawnToggleBtn = Instance.new("TextButton")
 SpawnToggleBtn.Name = "SpawnToggleBtn"
 SpawnToggleBtn.Size = UDim2.new(0, 160, 0, 32)
@@ -434,7 +434,7 @@ local function updateSpawnBtnState(enabled)
     end
 end
 
--- Логика перетаскивания всего блока за главную кнопку
+-- Логика перетаскивания всего блока
 local dragging = false
 local dragMoved = false
 local dragStart, startPos, spawnStartPos
@@ -601,12 +601,12 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
-                -- 1. Случайное чихание
-                if math.random(1, 35) == 1 then
+                -- 1. Сбалансированный шанс случайного чихания (только вне режима следования)
+                if not followingPlayer and math.random(1, 120) == 1 then
                     atomicSneeze()
 
                 else
-                    -- Проверяем, бежит ли игрок с тележкой
+                    -- Проверяем тележки
                     local threatPos, isFront = checkCartThreat(hrp)
 
                     -- 2. Побег
@@ -627,7 +627,7 @@ safeSpawn(function()
                         safeWait(1.2)
                         hum.WalkSpeed = 16
 
-                    -- 3. Режим «Следовать за игроком»
+                    -- 3. Режим «Следовать за игроком» (СТРОГИЙ ПРИОРИТЕТ: СПАВН И РАНДОМ ЗАБЛОКИРОВАНЫ)
                     elseif followingPlayer then
                         local targetChar = followingPlayer.Character
                         local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -646,7 +646,6 @@ safeSpawn(function()
                             else
                                 local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
                                 if (hrp.Position - lookPos).Magnitude > 0.1 then
-                                    -- Плавный поворот в режиме следования
                                     hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, lookPos), 0.2)
                                 end
                             end
@@ -657,7 +656,6 @@ safeSpawn(function()
 
                     -- 4. Автономный режим бездельничества
                     else
-                        -- Учитываем переключатель возвращения на спавн
                         local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                         local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
 
@@ -670,7 +668,7 @@ safeSpawn(function()
                         else
                             local actionChance = math.random(1, 10)
 
-                            -- ПЛАВНЫЙ РЕЖИМ НАБЛЮДЕНИЯ (используем Lerp для мягкого поворота вместо резкого дергания)
+                            -- Плавное наблюдение
                             if actionChance <= 2 then
                                 local targetChar = getNearestPlayer(12, 55)
                                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -722,9 +720,9 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические фразы
+                -- 5. Периодические фразы (с защищенным шансом на пасхалку Джекета)
                 if tick() - lastChatTime >= chatCooldown then
-                    if math.random(1, 40) == 1 then
+                    if not followingPlayer and math.random(1, 50) == 1 then
                         playJacketTapeSound()
                         sayMessage("do you know what time it is?")
                     else
