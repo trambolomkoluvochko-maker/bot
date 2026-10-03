@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (COMPACT UI + RANDOM TIPS CHAT + MEME PHRASES)
+-- LIVE SKIN BOT (COMPACT UI + RANDOM TIPS + NEW PHILOSOPHICAL PHRASE)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -158,7 +158,7 @@ local randomPhrases = {
     "мир так желток..", "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", 
     "Скучные тут все..", "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
     "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..", "Почему все думают боты в рб злые? Все не так же плохо..",
-    "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "А куда подевались то все?..",
+    "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "в аптеках не продают время потомучто время не лечит",
     "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?.."
 }
 
@@ -566,7 +566,7 @@ end
 if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
--- Обработка чата (План Б: рандомные подсказки без лимитов)
+-- Обработка чата
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     if tick() - lastResponseTime < 2 then return end
@@ -798,4 +798,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: План Б успешно активирован!")
+print("[BOT]: Всё готово!")
