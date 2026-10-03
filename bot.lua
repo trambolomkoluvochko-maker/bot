@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED UI + CHAT COMMANDS + MEME PHRASES)
+-- LIVE SKIN BOT (COMPACT UI + SHORT COMMANDS LIST + MEME PHRASES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -566,7 +566,7 @@ end
 if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
--- Обработка чата (включая обновленную справку по командам)
+-- Обработка чата с полным списком команд
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     if tick() - lastResponseTime < 2 then return end
@@ -582,7 +582,6 @@ local function processChatMessage(senderPlayer, msg)
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
 
-    -- Обновленная справка по командам
     if cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -600,7 +599,7 @@ local function processChatMessage(senderPlayer, msg)
                 sayMessage("сорян, я уже хожу за другим!")
             else
                 followingPlayer = senderPlayer
-                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
                 sayMessage("оке")
             end
         end
