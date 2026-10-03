@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (SMOOTH FOLLOW + OBSERVE + FIXED CHANCE + SPAWN PRIORITY)
+-- LIVE SKIN BOT (COMPACT UI + DYNAMIC SPAWN + SMOOTH ANIMATIONS)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного скрипта...")
+print("[BOT]: Запуск обновленного скрипта с крутым UI...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -23,7 +23,6 @@ local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 if not LocalPlayer then return end
 
--- Контейнер GUI
 local function getGuiParent()
     local success, parent = pcall(function()
         if gethui then return gethui() end
@@ -60,7 +59,6 @@ local function cleanText(str)
     return str
 end
 
--- Звук чиха (Громкий: 5.0)
 local function setupSneezeSound(char)
     if not char then return end
     local hrp = char:WaitForChild("HumanoidRootPart", 5)
@@ -79,7 +77,6 @@ local function setupSneezeSound(char)
     end
 end
 
--- Звук кассеты Джекета (Комфортная громкость: 1.0)
 local function playJacketTapeSound()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -122,20 +119,11 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     setupSneezeSound(char)
 end)
 
--- Фразы при побеге от тележки
 local cartEscapePhrases = {
-    "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ",
-    "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ",
-    "НУ НАФ",
-    "НЕТ НЕТ НЕЕЕТ!",
-    "Я СВАЛИВАЮ!",
-    "ДА ЧТО Я ТЕБЕ ЗДЕЛАЛ?!?",
-    "КЫШ КЫШ!",
-    "ноу ноу ноу мистер плеер",
-    "Э"
+    "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ", "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ", "НУ НАФ", "НЕТ НЕТ НЕЕЕТ!", 
+    "Я СВАЛИВАЮ!", "ДА ЧТО Я ТЕБЕ ЗДЕЛАЛ?!?", "КЫШ КЫШ!", "ноу ноу ноу мистер плеер", "Э"
 }
 
--- Анекдоты
 local jokesList = {
     "Заходит бот в бар, а бармен ему: 'Служба поддержки в соседнем здании!'",
     "Почему программисты любят темную тему? Свет привлекает багов!",
@@ -165,22 +153,13 @@ local randomPhrases = {
     "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
     "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
     "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
-    "Уменя черные точки вместо глаз..", 
-    "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
-    ":0", "Ходилкин бродилкин", 
-    "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", "Мир так жесток..",
-    "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", "Скучные тут все..",
-    "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
-    "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..",
-    "Почему все думают боты в рб злые? Все не так же плохо..",
-    "Если закрыть глаза то станет темно",
-    "Если грустишь.. не грусти",
-    "А куда подевались то все?..",
-    "Этот прицел просто имба!",
-    "Cheeki breeki..",
-    "Да уж..",
-    "я НЕ из плейса \"внизу канава 2\"!",
-    "Я за малиной кто сомной?.. никто?.."
+    "Уменя черные точки вместо глаз..", "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
+    ":0", "Ходилкин бродилкин", "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", 
+    "Мир так жесток..", "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", 
+    "Скучные тут все..", "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
+    "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..", "Почему все думают боты в рб злые? Все не так же плохо..",
+    "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "А куда подевались то все?..",
+    "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?.."
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
@@ -191,7 +170,6 @@ local playerStarePhrases = {
     "Вы игроки всегда так.. наряживаетесь?", "Кал переделывай", "Живой нет?"
 }
 
--- Чат
 local function sayMessage(text)
     if not text or text == "" then return end
     safeSpawn(function()
@@ -223,7 +201,6 @@ local function isGreeting(cleanMsg)
     return false
 end
 
--- Атомный чих
 local function atomicSneeze()
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -257,7 +234,6 @@ local function atomicSneeze()
     isSneezing = false
 end
 
--- Проверка тележек/сидений у игроков
 local function checkCartThreat(hrp)
     if not hrp then return nil, nil end
     
@@ -344,7 +320,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 UI ИНТЕРФЕЙС (ГЛАВНАЯ КНОПКА + КНОПКА СПАВНА)
+-- 🖱 СТИЛЬНЫЙ UI ИНТЕРФЕЙС (КОМПАКТНЫЙ С АНИМАЦИЕЙ)
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -360,43 +336,77 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
--- Главная кнопка активации ИИ
+-- Главная круглая кнопка ИИ
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "BotButton"
-ToggleButton.Size = UDim2.new(0, 160, 0, 48)
+ToggleButton.Size = UDim2.new(0, 52, 0, 52)
 ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-ToggleButton.Text = "🤖 ИИ: ВЫКЛЮЧЕН"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-ToggleButton.TextSize = 14
+ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+ToggleButton.Text = "✕"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextSize = 22
 ToggleButton.Font = Enum.Font.FredokaOne
 ToggleButton.Active = true
 ToggleButton.Parent = ScreenGui
 
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(0, 12)
+BtnCorner.CornerRadius = UDim.new(1, 0) -- Делает кнопку круглой
 BtnCorner.Parent = ToggleButton
 
 local BtnStroke = Instance.new("UIStroke")
-BtnStroke.Thickness = 2
-BtnStroke.Color = Color3.fromRGB(255, 60, 60)
+BtnStroke.Thickness = 2.5
+BtnStroke.Color = Color3.fromRGB(255, 120, 120)
 BtnStroke.Parent = ToggleButton
 
--- Дополнительная кнопка переключения возвращения на спавн
+-- Кнопка-меню (стрелочка / шестеренка) для открытия выдвижных функций
+local MenuToggleBtn = Instance.new("TextButton")
+MenuToggleBtn.Name = "MenuToggleBtn"
+MenuToggleBtn.Size = UDim2.new(0, 32, 0, 32)
+MenuToggleBtn.Position = UDim2.new(0.05, 58, 0.4, 10)
+MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MenuToggleBtn.Text = "⚙"
+MenuToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
+MenuToggleBtn.TextSize = 16
+MenuToggleBtn.Font = Enum.Font.FredokaOne
+MenuToggleBtn.Active = true
+MenuToggleBtn.Parent = ScreenGui
+
+local MenuCorner = Instance.new("UICorner")
+MenuCorner.CornerRadius = UDim.new(1, 0)
+MenuCorner.Parent = MenuToggleBtn
+
+local MenuStroke = Instance.new("UIStroke")
+MenuStroke.Thickness = 1.5
+MenuStroke.Color = Color3.fromRGB(100, 100, 180)
+MenuStroke.Parent = MenuToggleBtn
+
+-- Контейнер для выдвижных функций (с анимацией)
+local SubMenuFrame = Instance.new("Frame")
+SubMenuFrame.Name = "SubMenuFrame"
+SubMenuFrame.Size = UDim2.new(0, 160, 0, 0) -- Изначально свернуто (высота 0)
+SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 60)
+SubMenuFrame.BackgroundTransparency = 1
+SubMenuFrame.ClipsDescendants = true
+SubMenuFrame.Parent = ScreenGui
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Parent = SubMenuFrame
+
+-- 1. Кнопка спавна (ВКЛ/ВЫКЛ)
 local SpawnToggleBtn = Instance.new("TextButton")
 SpawnToggleBtn.Name = "SpawnToggleBtn"
 SpawnToggleBtn.Size = UDim2.new(0, 160, 0, 32)
-SpawnToggleBtn.Position = UDim2.new(0.05, 0, 0.4, 54)
 SpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 55)
 SpawnToggleBtn.Text = "🏠 Спавн: ВКЛ"
 SpawnToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
 SpawnToggleBtn.TextSize = 12
 SpawnToggleBtn.Font = Enum.Font.FredokaOne
-SpawnToggleBtn.Active = true
-SpawnToggleBtn.Parent = ScreenGui
+SpawnToggleBtn.Parent = SubMenuFrame
 
 local SpawnCorner = Instance.new("UICorner")
-SpawnCorner.CornerRadius = UDim.new(0, 10)
+SpawnCorner.CornerRadius = UDim.new(0, 8)
 SpawnCorner.Parent = SpawnToggleBtn
 
 local SpawnStroke = Instance.new("UIStroke")
@@ -404,19 +414,50 @@ SpawnStroke.Thickness = 1.5
 SpawnStroke.Color = Color3.fromRGB(60, 150, 255)
 SpawnStroke.Parent = SpawnToggleBtn
 
-local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- 2. Новая кнопка: Вставить спавн локацию (установить текущую позицию)
+local SetSpawnBtn = Instance.new("TextButton")
+SetSpawnBtn.Name = "SetSpawnBtn"
+SetSpawnBtn.Size = UDim2.new(0, 160, 0, 32)
+SetSpawnBtn.BackgroundColor3 = Color3.fromRGB(45, 25, 55)
+SetSpawnBtn.Text = "📍 Задать точку спавна"
+SetSpawnBtn.TextColor3 = Color3.fromRGB(255, 150, 255)
+SetSpawnBtn.TextSize = 11
+SetSpawnBtn.Font = Enum.Font.FredokaOne
+SetSpawnBtn.Parent = SubMenuFrame
+
+local SetSpawnCorner = Instance.new("UICorner")
+SetSpawnCorner.CornerRadius = UDim.new(0, 8)
+SetSpawnCorner.Parent = SetSpawnBtn
+
+local SetSpawnStroke = Instance.new("UIStroke")
+SetSpawnStroke.Thickness = 1.5
+SetSpawnStroke.Color = Color3.fromRGB(180, 80, 200)
+SetSpawnStroke.Parent = SetSpawnBtn
+
+local menuOpen = false
+local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- Анимация выдвижения подменю
+MenuToggleBtn.MouseButton1Click:Connect(function()
+    menuOpen = not menuOpen
+    if menuOpen then
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 160, 0, 70)}):Play()
+        TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
+    else
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 160, 0, 0)}):Play()
+        TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 0}):Play()
+    end
+end)
 
 local function updateUIState(active)
     if active then
-        ToggleButton.Text = "🤖 ИИ: АКТИВЕН"
-        ToggleButton.TextColor3 = Color3.fromRGB(100, 255, 150)
-        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(15, 55, 30)}):Play()
-        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(0, 255, 120)}):Play()
+        ToggleButton.Text = "✓"
+        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(40, 200, 100)}):Play()
+        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(120, 255, 170)}):Play()
     else
-        ToggleButton.Text = "🤖 ИИ: ВЫКЛЮЧЕН"
-        ToggleButton.TextColor3 = Color3.fromRGB(255, 100, 100)
-        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(55, 15, 15)}):Play()
-        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 60, 60)}):Play()
+        ToggleButton.Text = "✕"
+        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(255, 60, 60)}):Play()
+        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 120, 120)}):Play()
     end
 end
 
@@ -434,10 +475,10 @@ local function updateSpawnBtnState(enabled)
     end
 end
 
--- Логика перетаскивания всего блока
+-- Перетаскивание всего блока вместе
 local dragging = false
 local dragMoved = false
-local dragStart, startPos, spawnStartPos
+local dragStart, startPos, menuStartPos, subMenuStartPos
 
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -445,7 +486,8 @@ ToggleButton.InputBegan:Connect(function(input)
         dragMoved = false
         dragStart = input.Position
         startPos = ToggleButton.Position
-        spawnStartPos = SpawnToggleBtn.Position
+        menuStartPos = MenuToggleBtn.Position
+        subMenuStartPos = SubMenuFrame.Position
     end
 end)
 
@@ -454,18 +496,9 @@ UserInputService.InputChanged:Connect(function(input)
         local delta = input.Position - dragStart
         if delta.Magnitude > 5 then
             dragMoved = true
-            ToggleButton.Position = UDim2.new(
-                startPos.X.Scale, 
-                startPos.X.Offset + delta.X, 
-                startPos.Y.Scale, 
-                startPos.Y.Offset + delta.Y
-            )
-            SpawnToggleBtn.Position = UDim2.new(
-                spawnStartPos.X.Scale, 
-                spawnStartPos.X.Offset + delta.X, 
-                spawnStartPos.Y.Scale, 
-                spawnStartPos.Y.Offset + delta.Y
-            )
+            ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            MenuToggleBtn.Position = UDim2.new(menuStartPos.X.Scale, menuStartPos.X.Offset + delta.X, menuStartPos.Y.Scale, menuStartPos.Y.Offset + delta.Y)
+            SubMenuFrame.Position = UDim2.new(subMenuStartPos.X.Scale, subMenuStartPos.X.Offset + delta.X, subMenuStartPos.Y.Scale, subMenuStartPos.Y.Offset + delta.Y)
         end
     end
 end)
@@ -480,7 +513,6 @@ ToggleButton.MouseButton1Click:Connect(function()
     if not dragMoved then
         botActive = not botActive
         updateUIState(botActive)
-        
         if botActive then
             print("[BOT]: ИИ включен!")
         else
@@ -493,6 +525,26 @@ end)
 SpawnToggleBtn.MouseButton1Click:Connect(function()
     returnToSpawnActive = not returnToSpawnActive
     updateSpawnBtnState(returnToSpawnActive)
+end)
+
+-- Новая функция: ручная установка точки спавна по текущей позиции персонажа/бота
+SetSpawnBtn.MouseButton1Click:Connect(function()
+    if returnToSpawnActive then
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            spawnPosition = char.HumanoidRootPart.Position
+            print("[BOT]: Точка спавна успешно зафиксирована на позиции:", spawnPosition)
+            SetSpawnBtn.Text = "📍 Спавн обновлен!"
+            task.delay(1.5, function()
+                SetSpawnBtn.Text = "📍 Задать точку спавна"
+            end)
+        end
+    else
+        SetSpawnBtn.Text = "❌ Сперва включи спавн!"
+        task.delay(1.5, function()
+            SetSpawnBtn.Text = "📍 Задать точку спавна"
+        end)
+    end
 end)
 
 -- Anti-Sit
@@ -601,15 +653,14 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
-                -- 1. Сбалансированный шанс случайного чихания (только вне режима следования)
+                -- 1. Случайное чихание
                 if not followingPlayer and math.random(1, 120) == 1 then
                     atomicSneeze()
 
                 else
-                    -- Проверяем тележки
                     local threatPos, isFront = checkCartThreat(hrp)
 
-                    -- 2. Побег
+                    -- 2. Побег от тележки
                     if threatPos ~= nil then
                         hum.WalkSpeed = 32
 
@@ -627,7 +678,7 @@ safeSpawn(function()
                         safeWait(1.2)
                         hum.WalkSpeed = 16
 
-                    -- 3. Режим «Следовать за игроком» (СТРОГИЙ ПРИОРИТЕТ: СПАВН И РАНДОМ ЗАБЛОКИРОВАНЫ)
+                    -- 3. Режим следования
                     elseif followingPlayer then
                         local targetChar = followingPlayer.Character
                         local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -654,7 +705,7 @@ safeSpawn(function()
                         end
                         safeWait(0.2)
 
-                    -- 4. Автономный режим бездельничества
+                    -- 4. Автономный режим
                     else
                         local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                         local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
@@ -668,7 +719,6 @@ safeSpawn(function()
                         else
                             local actionChance = math.random(1, 10)
 
-                            -- Плавное наблюдение
                             if actionChance <= 2 then
                                 local targetChar = getNearestPlayer(12, 55)
                                 if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -720,7 +770,7 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические фразы (с защищенным шансом на пасхалку Джекета)
+                -- 5. Периодические фразы
                 if tick() - lastChatTime >= chatCooldown then
                     if not followingPlayer and math.random(1, 50) == 1 then
                         playJacketTapeSound()
@@ -737,4 +787,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Полностью готов к работе!")
+print("[BOT]: Полностью готов к работе с новым стильным UI!")
