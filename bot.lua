@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (COMPACT UI + DYNAMIC SPAWN + SMOOTH ANIMATIONS)
+-- LIVE SKIN BOT (FIXED UI + CHAT COMMANDS + MEME PHRASES)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного скрипта с крутым UI...")
+print("[BOT]: Запуск обновленного скрипта...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -155,7 +155,7 @@ local randomPhrases = {
     "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
     "Уменя черные точки вместо глаз..", "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
     ":0", "Ходилкин бродилкин", "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", 
-    "Мир так жесток..", "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", 
+    "мир так желток..", "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", 
     "Скучные тут все..", "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
     "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..", "Почему все думают боты в рб злые? Все не так же плохо..",
     "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "А куда подевались то все?..",
@@ -320,7 +320,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 СТИЛЬНЫЙ UI ИНТЕРФЕЙС (КОМПАКТНЫЙ С АНИМАЦИЕЙ)
+-- 🖱 СТИЛЬНЫЙ UI ИНТЕРФЕЙС (ПЕРЕДЕЛАННЫЙ)
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -341,32 +341,35 @@ local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "BotButton"
 ToggleButton.Size = UDim2.new(0, 52, 0, 52)
 ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 ToggleButton.Text = "✕"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.TextColor3 = Color3.fromRGB(255, 60, 60)
 ToggleButton.TextSize = 22
 ToggleButton.Font = Enum.Font.FredokaOne
 ToggleButton.Active = true
 ToggleButton.Parent = ScreenGui
 
+ToggleButton.TextXAlignment = Enum.TextXAlignment.Center
+ToggleButton.TextYAlignment = Enum.TextYAlignment.Center
+
 local BtnCorner = Instance.new("UICorner")
-BtnCorner.CornerRadius = UDim.new(1, 0) -- Делает кнопку круглой
+BtnCorner.CornerRadius = UDim.new(1, 0)
 BtnCorner.Parent = ToggleButton
 
 local BtnStroke = Instance.new("UIStroke")
-BtnStroke.Thickness = 2.5
-BtnStroke.Color = Color3.fromRGB(255, 120, 120)
+BtnStroke.Thickness = 2
+BtnStroke.Color = Color3.fromRGB(80, 80, 80)
 BtnStroke.Parent = ToggleButton
 
--- Кнопка-меню (стрелочка / шестеренка) для открытия выдвижных функций
+-- Кнопка настроек
 local MenuToggleBtn = Instance.new("TextButton")
 MenuToggleBtn.Name = "MenuToggleBtn"
-MenuToggleBtn.Size = UDim2.new(0, 32, 0, 32)
-MenuToggleBtn.Position = UDim2.new(0.05, 58, 0.4, 10)
+MenuToggleBtn.Size = UDim2.new(0, 28, 0, 28)
+MenuToggleBtn.Position = UDim2.new(0.05, 55, 0.4, 12)
 MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 MenuToggleBtn.Text = "⚙"
 MenuToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
-MenuToggleBtn.TextSize = 16
+MenuToggleBtn.TextSize = 14
 MenuToggleBtn.Font = Enum.Font.FredokaOne
 MenuToggleBtn.Active = true
 MenuToggleBtn.Parent = ScreenGui
@@ -380,11 +383,11 @@ MenuStroke.Thickness = 1.5
 MenuStroke.Color = Color3.fromRGB(100, 100, 180)
 MenuStroke.Parent = MenuToggleBtn
 
--- Контейнер для выдвижных функций (с анимацией)
+-- Контейнер для выдвижных функций
 local SubMenuFrame = Instance.new("Frame")
 SubMenuFrame.Name = "SubMenuFrame"
-SubMenuFrame.Size = UDim2.new(0, 160, 0, 0) -- Изначально свернуто (высота 0)
-SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 60)
+SubMenuFrame.Size = UDim2.new(0, 160, 0, 0)
+SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 58)
 SubMenuFrame.BackgroundTransparency = 1
 SubMenuFrame.ClipsDescendants = true
 SubMenuFrame.Parent = ScreenGui
@@ -414,7 +417,7 @@ SpawnStroke.Thickness = 1.5
 SpawnStroke.Color = Color3.fromRGB(60, 150, 255)
 SpawnStroke.Parent = SpawnToggleBtn
 
--- 2. Новая кнопка: Вставить спавн локацию (установить текущую позицию)
+-- 2. Кнопка установки текущей точки спавна
 local SetSpawnBtn = Instance.new("TextButton")
 SetSpawnBtn.Name = "SetSpawnBtn"
 SetSpawnBtn.Size = UDim2.new(0, 160, 0, 32)
@@ -437,7 +440,6 @@ SetSpawnStroke.Parent = SetSpawnBtn
 local menuOpen = false
 local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
--- Анимация выдвижения подменю
 MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
@@ -452,12 +454,12 @@ end)
 local function updateUIState(active)
     if active then
         ToggleButton.Text = "✓"
-        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(40, 200, 100)}):Play()
-        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(120, 255, 170)}):Play()
+        ToggleButton.TextColor3 = Color3.fromRGB(60, 255, 120)
+        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(60, 255, 120)}):Play()
     else
         ToggleButton.Text = "✕"
-        TweenService:Create(ToggleButton, tweenInfo, {BackgroundColor3 = Color3.fromRGB(255, 60, 60)}):Play()
-        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 120, 120)}):Play()
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 60, 60)
+        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 60, 60)}):Play()
     end
 end
 
@@ -527,13 +529,12 @@ SpawnToggleBtn.MouseButton1Click:Connect(function()
     updateSpawnBtnState(returnToSpawnActive)
 end)
 
--- Новая функция: ручная установка точки спавна по текущей позиции персонажа/бота
 SetSpawnBtn.MouseButton1Click:Connect(function()
     if returnToSpawnActive then
         local char = LocalPlayer.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
             spawnPosition = char.HumanoidRootPart.Position
-            print("[BOT]: Точка спавна успешно зафиксирована на позиции:", spawnPosition)
+            print("[BOT]: Точка спавна зафиксирована:", spawnPosition)
             SetSpawnBtn.Text = "📍 Спавн обновлен!"
             task.delay(1.5, function()
                 SetSpawnBtn.Text = "📍 Задать точку спавна"
@@ -565,7 +566,7 @@ end
 if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
--- Обработка чата
+-- Обработка чата (включая обновленную справку по командам)
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     if tick() - lastResponseTime < 2 then return end
@@ -581,7 +582,14 @@ local function processChatMessage(senderPlayer, msg)
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
 
-    if cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") then
+    -- Обновленная справка по командам
+    if cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
+        if dist <= 60 then
+            lastResponseTime = tick()
+            sayMessage("Если сказать \"следуй за мной\" то я буду следовать, если сказать \"стоп\" я остановлюсь при следовании, если сказать \"расскажи анекдот\" я расскажу анекдот.")
+        end
+
+    elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") then
         lastResponseTime = tick()
         sayMessage(botIdentityPhrases[math.random(#botIdentityPhrases)])
 
@@ -787,4 +795,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Полностью готов к работе с новым стильным UI!")
+print("[BOT]: Всё готово! Команды чата обновлены!")
