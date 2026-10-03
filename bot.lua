@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (COMPACT UI + SHORT COMMANDS LIST + MEME PHRASES)
+-- LIVE SKIN BOT (COMPACT UI + RANDOM TIPS CHAT + MEME PHRASES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -320,7 +320,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 СТИЛЬНЫЙ UI ИНТЕРФЕЙС (ПЕРЕДЕЛАННЫЙ)
+-- 🖱 СТИЛЬНЫЙ UI ИНТЕРФЕЙС
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -566,7 +566,7 @@ end
 if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
--- Обработка чата с полным списком команд
+-- Обработка чата (План Б: рандомные подсказки без лимитов)
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
     if tick() - lastResponseTime < 2 then return end
@@ -585,7 +585,11 @@ local function processChatMessage(senderPlayer, msg)
     if cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
-            sayMessage("Если сказать \"следуй за мной\" то я буду следовать, если сказать \"стоп\" я остановлюсь при следовании, если сказать \"расскажи анекдот\" я расскажу анекдот.")
+            local randomTips = {
+                "Попробуй сказать \"следуй за мной\" чтобы я следовал и если надоест проще сказать \"стоп\"",
+                "Попробуй сказать \"расскажи анекдот\" если хочешь послушать анекдоты хотя я эт могу и упомянуть.."
+            }
+            sayMessage(randomTips[math.random(#randomTips)])
         end
 
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") then
@@ -599,7 +603,7 @@ local function processChatMessage(senderPlayer, msg)
                 sayMessage("сорян, я уже хожу за другим!")
             else
                 followingPlayer = senderPlayer
-                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
                 sayMessage("оке")
             end
         end
@@ -794,4 +798,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Всё готово! Команды чата обновлены!")
+print("[BOT]: План Б успешно активирован!")
