@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (COMPACT UI + RANDOM TIPS + NEW PHILOSOPHICAL PHRASE)
+-- LIVE SKIN BOT (COMPACT UI + EVALUATION COMMAND + CLEAN CODE)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -34,7 +34,6 @@ end
 
 local botActive = false
 local returnToSpawnActive = true
-local isSneezing = false
 local lastChatTime = tick()
 local lastResponseTime = 0
 local chatCooldown = math.random(10, 20)
@@ -59,43 +58,6 @@ local function cleanText(str)
     return str
 end
 
-local function setupSneezeSound(char)
-    if not char then return end
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    if hrp then
-        local oldSound = hrp:FindFirstChild("AtomicSneeze")
-        if oldSound then oldSound:Destroy() end
-
-        local sneezeSound = Instance.new("Sound")
-        sneezeSound.Name = "AtomicSneeze"
-        sneezeSound.SoundId = "rbxassetid://75348227771086"
-        sneezeSound.Volume = 5.0
-        sneezeSound.RollOffMinDistance = 40
-        sneezeSound.RollOffMaxDistance = 250
-        sneezeSound.RollOffMode = Enum.RollOffMode.Linear
-        sneezeSound.Parent = hrp
-    end
-end
-
-local function playJacketTapeSound()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    local snd = hrp:FindFirstChild("JacketTapeSound")
-    if not snd then
-        snd = Instance.new("Sound")
-        snd.Name = "JacketTapeSound"
-        snd.SoundId = "rbxassetid://136146723278872"
-        snd.Volume = 1.0
-        snd.RollOffMinDistance = 15
-        snd.RollOffMaxDistance = 80
-        snd.RollOffMode = Enum.RollOffMode.Linear
-        snd.Parent = hrp
-    end
-    snd:Play()
-end
-
 local function updateSpawnPosition()
     local char = LocalPlayer.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -110,13 +72,11 @@ end
 
 if LocalPlayer.Character then 
     updateSpawnPosition() 
-    setupSneezeSound(LocalPlayer.Character)
 end
 
 LocalPlayer.CharacterAdded:Connect(function(char)
     safeWait(1)
     updateSpawnPosition()
-    setupSneezeSound(char)
 end)
 
 local cartEscapePhrases = {
@@ -139,6 +99,20 @@ local jokesList = {
     "— Бот, ты спишь? — Нет, я в бесконечном цикле while true do!"
 }
 
+-- Ответы для оценки
+local evaluationResponses = {
+    "я не вижу смысла оценивать это днище",
+    "10/10 ну чисто имба!",
+    "0/10 без комментариев..",
+    "5/10 сойдет для сельской местности",
+    "8/10 очень даже неплохо!",
+    "1/10 такое себе если честно..",
+    "7/10 норм, пойдет",
+    "9/10 стильно!",
+    "3/10 мда уж..",
+    "100/10 чисто легенда!"
+}
+
 local greetingResponses = { "?", "Даров", "Досвидание", "Прив", "Здарова" }
 local botIdentityPhrases = { "А ты тоже чтоли?", "Нет я болтик", "Ес оф корс" }
 local spawnReturnPhrases = {
@@ -159,7 +133,8 @@ local randomPhrases = {
     "Скучные тут все..", "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
     "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..", "Почему все думают боты в рб злые? Все не так же плохо..",
     "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "в аптеках не продают время потомучто время не лечит",
-    "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?.."
+    "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?..",
+    "do you know what time it is?"
 }
 
 local seatReactionPhrases = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "Не чет не хочу извини брат", "..." }
@@ -192,46 +167,13 @@ local function sayMessage(text)
 end
 
 local function isGreeting(cleanMsg)
-    local greetings = { "ку", "пр", "привет", "хай", "дратути", "здарова", "салам", "хеллоу", "здаров" }
+    local greetings = { "ку", "пр", "привет", "хай", "дратути", "здарова", "салам", "хеллоу", "здаров", "даров", "здарово" }
     for word in cleanMsg:gmatch("[%wа-яёА-ЯЁ]+") do
         for _, g in ipairs(greetings) do
             if word == g then return true end
         end
     end
     return false
-end
-
-local function atomicSneeze()
-    local char = LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if not char or not hrp or not hum or isSneezing or not botActive then return end
-
-    isSneezing = true
-    local sound = hrp:FindFirstChild("AtomicSneeze")
-    if sound then sound:Play() end
-
-    hum:ChangeState(Enum.HumanoidStateType.Physics)
-    hum.PlatformStand = true
-    hrp.AssemblyLinearVelocity = Vector3.new(math.random(-20, 20), 140, math.random(-20, 20))
-
-    safeWait(0.6)
-
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    rayParams.FilterDescendantsInstances = {char}
-
-    local startTime = tick()
-    while tick() - startTime < 6 do
-        safeWait(0.1)
-        local ray = Workspace:Raycast(hrp.Position, Vector3.new(0, -3.5, 0), rayParams)
-        if ray or math.abs(hrp.AssemblyLinearVelocity.Y) < 1 then break end
-    end
-
-    safeWait(0.4)
-    hum.PlatformStand = false
-    hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-    isSneezing = false
 end
 
 local function checkCartThreat(hrp)
@@ -568,7 +510,7 @@ LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- Обработка чата
 local function processChatMessage(senderPlayer, msg)
-    if not botActive or senderPlayer == LocalPlayer or isSneezing then return end
+    if not botActive or senderPlayer == LocalPlayer then return end
     if tick() - lastResponseTime < 2 then return end
 
     local cleanMsg = cleanText(msg)
@@ -582,20 +524,37 @@ local function processChatMessage(senderPlayer, msg)
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
 
-    if cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
+    -- 1. Реакция на приветствие (Приоритетно!)
+    if isGreeting(cleanMsg) and dist <= 50 then
+        lastResponseTime = tick()
+        sayMessage(greetingResponses[math.random(#greetingResponses)])
+
+    -- 2. Новая команда "Оцени"
+    elseif cleanMsg:find("оцени") then
+        if dist <= 60 then
+            lastResponseTime = tick()
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            sayMessage(evaluationResponses[math.random(#evaluationResponses)])
+        end
+
+    -- 3. Запрос команд / помощи (с добавленной новой подсказкой)
+    elseif cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
             local randomTips = {
                 "Попробуй сказать \"следуй за мной\" чтобы я следовал и если надоест проще сказать \"стоп\"",
-                "Попробуй сказать \"расскажи анекдот\" если хочешь послушать анекдоты хотя я эт могу и упомянуть.."
+                "Попробуй сказать \"расскажи анекдот\" если хочешь послушать анекдоты хотя я эт могу и упомянуть..",
+                "Попробуй сказать \"оцени\" и я оценю то что ты имел ввиду!"
             }
             sayMessage(randomTips[math.random(#randomTips)])
         end
 
+    -- 4. Вопросы «ты бот?»
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") then
         lastResponseTime = tick()
         sayMessage(botIdentityPhrases[math.random(#botIdentityPhrases)])
 
+    -- 5. Команда «следуй за мной»
     elseif cleanMsg:find("следуй") or cleanMsg:find("следу") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -608,6 +567,7 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
+    -- 6. Команда «стоп»
     elseif cleanMsg:find("хватит") or cleanMsg:find("отвянь") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
         if followingPlayer == senderPlayer then
             lastResponseTime = tick()
@@ -615,15 +575,12 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage("лан покеда")
         end
 
+    -- 7. Расскажи анекдот
     elseif cleanMsg:find("анекдот") or cleanMsg:find("расскажи") then
         if dist <= 60 then
             lastResponseTime = tick()
             sayMessage(jokesList[math.random(#jokesList)])
         end
-
-    elseif isGreeting(cleanMsg) and dist <= 40 then
-        lastResponseTime = tick()
-        sayMessage(greetingResponses[math.random(#greetingResponses)])
     end
 end
 
@@ -646,7 +603,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer then
+    if p ~= LocalPlayer me
         p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
     end
 end)
@@ -657,138 +614,127 @@ safeSpawn(function()
     while true do
         safeWait(0.2)
 
-        if botActive and not isSneezing then
+        if botActive then
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hum and hrp and hum.Health > 0 then
 
-                -- 1. Случайное чихание
-                if not followingPlayer and math.random(1, 120) == 1 then
-                    atomicSneeze()
+                local threatPos, isFront = checkCartThreat(hrp)
 
-                else
-                    local threatPos, isFront = checkCartThreat(hrp)
+                -- 1. Побег от тележки
+                if threatPos ~= nil then
+                    hum.WalkSpeed = 32
 
-                    -- 2. Побег от тележки
-                    if threatPos ~= nil then
-                        hum.WalkSpeed = 32
-
-                        local escapeTarget
-                        if isFront then
-                            escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 28)
-                        else
-                            escapeTarget = hrp.Position + (hrp.CFrame.LookVector * 28)
-                        end
-
-                        hum:MoveTo(escapeTarget)
-                        sayMessage(cartEscapePhrases[math.random(#cartEscapePhrases)])
-                        if math.random(1, 2) == 1 then hum.Jump = true end
-
-                        safeWait(1.2)
-                        hum.WalkSpeed = 16
-
-                    -- 3. Режим следования
-                    elseif followingPlayer then
-                        local targetChar = followingPlayer.Character
-                        local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
-                        local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
-
-                        if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
-                            local dist = (targetHrp.Position - hrp.Position).Magnitude
-
-                            if dist > 130 then
-                                sayMessage("ну знаешь чел я не флеш как ты так что адиос")
-                                followingPlayer = nil
-                                safeWait(1)
-                            elseif dist > 7.5 then
-                                hum:MoveTo(targetHrp.Position)
-                                if math.random(1, 12) == 1 then hum.Jump = true end
-                            else
-                                local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
-                                if (hrp.Position - lookPos).Magnitude > 0.1 then
-                                    hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, lookPos), 0.2)
-                                end
-                            end
-                        else
-                            followingPlayer = nil
-                        end
-                        safeWait(0.2)
-
-                    -- 4. Автономный режим
+                    local escapeTarget
+                    if isFront then
+                        escapeTarget = hrp.Position - (hrp.CFrame.LookVector * 28)
                     else
-                        local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
-                        local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
+                        escapeTarget = hrp.Position + (hrp.CFrame.LookVector * 28)
+                    end
 
-                        if shouldReturnSpawn then
-                            safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
-                            if math.random(1, 2) == 1 then
-                                sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
-                            end
-                            safeWait(math.random(3, 6))
+                    hum:MoveTo(escapeTarget)
+                    sayMessage(cartEscapePhrases[math.random(#cartEscapePhrases)])
+                    if math.random(1, 2) == 1 then hum.Jump = true end
+
+                    safeWait(1.2)
+                    hum.WalkSpeed = 16
+
+                -- 2. Режим следования
+                elseif followingPlayer then
+                    local targetChar = followingPlayer.Character
+                    local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
+                    local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
+
+                    if targetChar and targetHrp and targetHum and targetHum.Health > 0 then
+                        local dist = (targetHrp.Position - hrp.Position).Magnitude
+
+                        if dist > 130 then
+                            sayMessage("ну знаешь чел я не флеш как ты так что адиос")
+                            followingPlayer = nil
+                            safeWait(1)
+                        elseif dist > 7.5 then
+                            hum:MoveTo(targetHrp.Position)
+                            if math.random(1, 12) == 1 then hum.Jump = true end
                         else
-                            local actionChance = math.random(1, 10)
-
-                            if actionChance <= 2 then
-                                local targetChar = getNearestPlayer(12, 55)
-                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                    local tHrp = targetChar.HumanoidRootPart
-                                    local observeStart = tick()
-
-                                    while tick() - observeStart < 8 and botActive and not isSneezing and not followingPlayer do
-                                        if tHrp and hrp then
-                                            local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
-                                        end
-                                        safeWait(0.05)
-                                    end
-                                else
-                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                    safeWait(math.random(2, 5))
-                                end
-
-                            elseif actionChance == 3 then
-                                local targetChar = getNearestPlayer(0, 35)
-                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                    local tHrp = targetChar.HumanoidRootPart
-                                    safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                                    safeWait(1.5)
-
-                                    if hrp and tHrp then
-                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                        hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
-                                        sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
-                                    end
-                                    safeWait(math.random(3, 6))
-                                else
-                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                    safeWait(math.random(2, 5))
-                                end
-
-                            elseif actionChance <= 6 then
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(3, 7))
-
-                            elseif actionChance <= 9 then
-                                safeWait(math.random(4, 8))
-
-                            else
-                                useRandomItem()
-                                safeWait(math.random(2, 4))
+                            local lookPos = Vector3.new(targetHrp.Position.X, hrp.Position.Y, targetHrp.Position.Z)
+                            if (hrp.Position - lookPos).Magnitude > 0.1 then
+                                hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, lookPos), 0.2)
                             end
+                        end
+                    else
+                        followingPlayer = nil
+                    end
+                    safeWait(0.2)
+
+                -- 3. Автономный режим
+                else
+                    local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
+                    local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
+
+                    if shouldReturnSpawn then
+                        safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
+                        if math.random(1, 2) == 1 then
+                            sayMessage(spawnReturnPhrases[math.random(#spawnReturnPhrases)])
+                        end
+                        safeWait(math.random(3, 6))
+                    else
+                        local actionChance = math.random(1, 10)
+
+                        if actionChance <= 2 then
+                            local targetChar = getNearestPlayer(12, 55)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                local tHrp = targetChar.HumanoidRootPart
+                                local observeStart = tick()
+
+                                while tick() - observeStart < 8 and botActive and not followingPlayer do
+                                    if tHrp and hrp then
+                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                        hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
+                                    end
+                                    safeWait(0.05)
+                                end
+                            else
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(2, 5))
+                            end
+
+                        elseif actionChance == 3 then
+                            local targetChar = getNearestPlayer(0, 35)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                local tHrp = targetChar.HumanoidRootPart
+                                safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                safeWait(1.5)
+
+                                if hrp and tHrp then
+                                    local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
+                                    sayMessage(playerStarePhrases[math.random(#playerStarePhrases)])
+                                end
+                                safeWait(math.random(3, 6))
+                            else
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(2, 5))
+                            end
+
+                        elseif actionChance <= 6 then
+                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                            safeWait(math.random(3, 7))
+
+                        elseif actionChance <= 9 then
+                            safeWait(math.random(4, 8))
+
+                        else
+                            useRandomItem()
+                            safeWait(math.random(2, 4))
                         end
                     end
                 end
 
-                -- 5. Периодические фразы
+                -- 4. Периодические фразы
                 if tick() - lastChatTime >= chatCooldown then
-                    if not followingPlayer and math.random(1, 50) == 1 then
-                        playJacketTapeSound()
-                        sayMessage("do you know what time it is?")
-                    else
-                        sayMessage(randomPhrases[math.random(#randomPhrases)])
-                    end
+                    sayMessage(randomPhrases[math.random(#randomPhrases)])
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
                 end
@@ -798,4 +744,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Всё готово!")
+print("[BOT]: Обновленный скрипт с функцией 'Оцени' успешно запущен!")
