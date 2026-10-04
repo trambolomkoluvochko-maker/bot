@@ -537,8 +537,8 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(evaluationResponses[math.random(#evaluationResponses)])
         end
 
-    -- 3. Запрос команд / помощи
-    elseif cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
+    -- 3. Запрос подсказок (Только по слову "команды")
+    elseif cleanMsg:find("команды") then
         if dist <= 60 then
             lastResponseTime = tick()
             local randomTips = {
