@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (COMPACT UI + EVALUATION COMMAND + CLEAN CODE)
+-- LIVE SKIN BOT (COMPACT UI + EVALUATION COMMAND + FIXED SYNTAX)
 -- ==========================================
 
 print("[BOT]: Запуск обновленного скрипта...")
@@ -529,7 +529,7 @@ local function processChatMessage(senderPlayer, msg)
         lastResponseTime = tick()
         sayMessage(greetingResponses[math.random(#greetingResponses)])
 
-    -- 2. Новая команда "Оцени"
+    -- 2. Команда "Оцени"
     elseif cleanMsg:find("оцени") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -537,7 +537,7 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(evaluationResponses[math.random(#evaluationResponses)])
         end
 
-    -- 3. Запрос команд / помощи (с добавленной новой подсказкой)
+    -- 3. Запрос команд / помощи
     elseif cleanMsg:find("что ты можешь") or cleanMsg:find("что ты умеешь") or cleanMsg:find("команды") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -603,7 +603,7 @@ for _, p in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerAdded:Connect(function(p)
-    if p ~= LocalPlayer me
+    if p ~= LocalPlayer then
         p.Chatted:Connect(function(msg) processChatMessage(p, msg) end)
     end
 end)
@@ -744,4 +744,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Обновленный скрипт с функцией 'Оцени' успешно запущен!")
+print("[BOT]: Скрипт успешно запущен без ошибок!")
