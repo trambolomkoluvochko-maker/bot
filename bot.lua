@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + SCROLLABLE SETTINGS + TEXT FIXES)
+-- LIVE SKIN BOT (PRO UI + STARE DETECTION + CLEAN CODE)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного скрипта с улучшенным UI...")
+print("[BOT]: Запуск обновленной версии бота...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -42,6 +42,10 @@ local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 local Connections = {}
 
+-- Детектор взгляда
+local staringPlayer = nil
+local stareStartTime = 0
+
 -- Перевод кириллицы
 local cyrillicUpper = {
     ["А"]="а", ["Б"]="б", ["В"]="в", ["Г"]="г", ["Д"]="д", ["Е"]="е", ["Ё"]="ё",
@@ -78,7 +82,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (ИСПРАВЛЕНА АНГЛИЙСКАЯ ВЕРСИЯ)
+-- БАЗА ФРАЗ (С НОВОЙ РЕАКЦИЕЙ НА ВЗГЛЯД)
 -- ------------------------------------------
 local Translations = {
     RU = {
@@ -100,6 +104,12 @@ local Translations = {
             "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
             "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", 
             "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу", "Живой нет?"
+        },
+        stareBack = {
+            "Поч ты так на меня смотришь?...",
+            "Оуу.. перестаньте мистер игрок смущаете..))",
+            "И долго ты так на меня смотрел?",
+            "?"
         },
         cartEscape = {
             "НЕ НЕ НЕ НЕ В ЭТОТ РАЗ", "НЕНАДО ДЯДЯ.. ИЛИ ТЕТЯ", "НУ НАФ", "НЕТ НЕТ НЕЕЕТ!", 
@@ -156,6 +166,12 @@ local Translations = {
             "You know.. sometimes finding that soulmate isn't easy", "Still changing your outfit huh?", "🤨", "AFK? I guess so..", 
             "Hey what are you lost in our neighborhood for?", "._.", "Did I approach you already or not?..", "HeLlo LiTtLe OnE wHaT u DoInG?", 
             "You look weird..", "OMG I DON'T EVEN KNOW WHAT YOUR SKIN LOOKS LIKE!", "Boo!", "Alive or what?"
+        },
+        stareBack = {
+            "Why are you looking at me like that?...",
+            "Ooh.. stop it mr player you're making me blush..))",
+            "How long have you been staring at me?",
+            "?"
         },
         cartEscape = {
             "NO NO NO NOT THIS TIME", "DONT TOUCH ME..", "NOPE NOPE NOPE!", 
@@ -254,45 +270,22 @@ end
 
 local function getNearestPlayer(minDist, maxDist)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil, nil end
     local myPos = char.HumanoidRootPart.Position
-    local nearest, closestDist = nil, maxDist or 50
+    local nearestChar, nearestPlayer = nil, nil
+    local closestDist = maxDist or 50
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
             if dist >= (minDist or 0) and dist <= closestDist then
                 closestDist = dist
-                nearest = player.Character
+                nearestChar = player.Character
+                nearestPlayer = player
             end
         end
     end
-    return nearest
-end
-
-local function giveTool(toolName)
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
-    if not backpack then return end
-
-    local reFolder = ReplicatedStorage:FindFirstChild("RE")
-    local toolRemote = reFolder and (reFolder:FindFirstChild("1Tool1") or reFolder:FindFirstChild("1Item1"))
-
-    if toolRemote then
-        pcall(function() toolRemote:FireServer(toolName) end)
-    end
-
-    safeWait(0.1)
-    if not backpack:FindFirstChild(toolName) then
-        for _, item in ipairs(ReplicatedStorage:GetDescendants()) do
-            if item:IsA("Tool") and item.Name == toolName then
-                pcall(function()
-                    local clone = item:Clone()
-                    clone.Parent = backpack
-                end)
-                break
-            end
-        end
-    end
+    return nearestChar, nearestPlayer
 end
 
 local function useRandomItem()
@@ -331,7 +324,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 УЛУЧШЕННЫЙ UI С КНОПКОЙ "X" И СКРОЛЛОМ
+-- 🖱 ЧИСТЫЙ И ИДЕАЛЬНЫЙ UI ИНТЕРФЕЙС
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -345,7 +338,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
--- Главная кнопка ИИ (Использует чёткую букву X)
+-- Главная кнопка ИИ
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "BotButton"
 ToggleButton.Size = UDim2.new(0, 50, 0, 50)
@@ -381,7 +374,7 @@ local MenuStroke = Instance.new("UIStroke", MenuToggleBtn)
 MenuStroke.Thickness = 1.5
 MenuStroke.Color = Color3.fromRGB(70, 80, 110)
 
--- Прокручиваемый контейнер для настроек (ScrollingFrame)
+-- Прокручиваемый контейнер для настроек (SubMenuFrame)
 local SubMenuFrame = Instance.new("ScrollingFrame")
 SubMenuFrame.Name = "SubMenuFrame"
 SubMenuFrame.Size = UDim2.new(0, 165, 0, 0)
@@ -389,6 +382,7 @@ SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 56)
 SubMenuFrame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
 SubMenuFrame.BackgroundTransparency = 0.15
 SubMenuFrame.ClipsDescendants = true
+SubMenuFrame.Visible = false -- Исправлен баг торчащих настроек!
 SubMenuFrame.ScrollBarThickness = 3
 SubMenuFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 150, 255)
 SubMenuFrame.Parent = ScreenGui
@@ -451,20 +445,7 @@ local LanguageStroke = Instance.new("UIStroke", LanguageBtn)
 LanguageStroke.Thickness = 1
 LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
 
--- 4. Кнопка каталога предметов
-local OpenItemsBtn = Instance.new("TextButton", SubMenuFrame)
-OpenItemsBtn.Size = UDim2.new(1, -6, 0, 28)
-OpenItemsBtn.BackgroundColor3 = Color3.fromRGB(22, 45, 32)
-OpenItemsBtn.Text = "📜 Список предметов"
-OpenItemsBtn.TextColor3 = Color3.fromRGB(120, 240, 160)
-OpenItemsBtn.TextSize = 10
-OpenItemsBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", OpenItemsBtn).CornerRadius = UDim.new(0, 6)
-local OpenItemsStroke = Instance.new("UIStroke", OpenItemsBtn)
-OpenItemsStroke.Thickness = 1
-OpenItemsStroke.Color = Color3.fromRGB(70, 190, 110)
-
--- 5. Кнопка выключения скрипта
+-- 4. Кнопка выключения скрипта
 local UnloadBtn = Instance.new("TextButton", SubMenuFrame)
 UnloadBtn.Size = UDim2.new(1, -6, 0, 28)
 UnloadBtn.BackgroundColor3 = Color3.fromRGB(50, 20, 22)
@@ -476,120 +457,6 @@ Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 6)
 local UnloadStroke = Instance.new("UIStroke", UnloadBtn)
 UnloadStroke.Thickness = 1
 UnloadStroke.Color = Color3.fromRGB(200, 70, 70)
-
--- ==========================================
--- 🎒 ОКНО ВЫБОРА ПРЕДМЕТОВ (КАТАЛОГ ИВЕНТОВ/VIP)
--- ==========================================
-local ItemsFrame = Instance.new("Frame", ScreenGui)
-ItemsFrame.Name = "ItemsFrame"
-ItemsFrame.Size = UDim2.new(0, 230, 0, 270)
-ItemsFrame.Position = UDim2.new(0.05, 175, 0.3, 0)
-ItemsFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
-ItemsFrame.Visible = false
-ItemsFrame.Active = true
-
-Instance.new("UICorner", ItemsFrame).CornerRadius = UDim.new(0, 10)
-local ItemsFrameStroke = Instance.new("UIStroke", ItemsFrame)
-ItemsFrameStroke.Thickness = 1.5
-ItemsFrameStroke.Color = Color3.fromRGB(70, 190, 110)
-
-local TitleLabel = Instance.new("TextLabel", ItemsFrame)
-TitleLabel.Size = UDim2.new(1, -30, 0, 30)
-TitleLabel.Position = UDim2.new(0, 10, 0, 5)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "🎒 ИВЕНТЫ & VIP ВЕЩИ"
-TitleLabel.TextColor3 = Color3.fromRGB(120, 240, 160)
-TitleLabel.TextSize = 11
-TitleLabel.Font = Enum.Font.FredokaOne
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local CloseItemsBtn = Instance.new("TextButton", ItemsFrame)
-CloseItemsBtn.Size = UDim2.new(0, 22, 0, 22)
-CloseItemsBtn.Position = UDim2.new(1, -26, 0, 6)
-CloseItemsBtn.BackgroundColor3 = Color3.fromRGB(45, 25, 25)
-CloseItemsBtn.Text = "X"
-CloseItemsBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseItemsBtn.Font = Enum.Font.FredokaOne
-CloseItemsBtn.TextSize = 11
-Instance.new("UICorner", CloseItemsBtn).CornerRadius = UDim.new(0, 6)
-
-local SearchBox = Instance.new("TextBox", ItemsFrame)
-SearchBox.Size = UDim2.new(1, -20, 0, 26)
-SearchBox.Position = UDim2.new(0, 10, 0, 36)
-SearchBox.BackgroundColor3 = Color3.fromRGB(30, 33, 42)
-SearchBox.PlaceholderText = "🔍 Поиск вещи..."
-SearchBox.PlaceholderColor3 = Color3.fromRGB(120, 130, 150)
-SearchBox.Text = ""
-SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SearchBox.TextSize = 10
-SearchBox.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 6)
-
-local ItemScroll = Instance.new("ScrollingFrame", ItemsFrame)
-ItemScroll.Size = UDim2.new(1, -20, 1, -74)
-ItemScroll.Position = UDim2.new(0, 10, 0, 68)
-ItemScroll.BackgroundTransparency = 1
-ItemScroll.ScrollBarThickness = 3
-ItemScroll.ScrollBarImageColor3 = Color3.fromRGB(70, 190, 110)
-
-local ScrollLayout = Instance.new("UIListLayout", ItemScroll)
-ScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
-ScrollLayout.Padding = UDim.new(0, 4)
-
-ScrollLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    ItemScroll.CanvasSize = UDim2.new(0, 0, 0, ScrollLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local RareItemsList = {
-    ["💳 Gamepass"] = { "Money Gun", "Rocket Launcher" },
-    ["🐰 Пасха"] = { "Egg Launcher", "Spring Shufflers" },
-    ["🎡 Карнавал"] = { "Glider", "Cannon", "Golden Basketball" },
-    ["🎃 Хэллоуин"] = { "Candy Basket", "Chainsaw", "Trick or treat bag" },
-    ["❄️ Снежный Фестиваль"] = { "Snowball Cannon", "Thermos", "Lollipop Peppermint", "Snowball", "Snowflake Glider" }
-}
-
-local function populateItemList(filterText)
-    for _, child in ipairs(ItemScroll:GetChildren()) do
-        if child:IsA("TextButton") or child:IsA("TextLabel") then child:Destroy() end
-    end
-
-    filterText = filterText and filterText:lower() or ""
-
-    for catName, items in pairs(RareItemsList) do
-        local catHeader = Instance.new("TextLabel", ItemScroll)
-        catHeader.Size = UDim2.new(1, 0, 0, 18)
-        catHeader.BackgroundTransparency = 1
-        catHeader.Text = catName
-        catHeader.TextColor3 = Color3.fromRGB(255, 200, 100)
-        catHeader.TextSize = 10
-        catHeader.Font = Enum.Font.FredokaOne
-        catHeader.TextXAlignment = Enum.TextXAlignment.Left
-
-        for _, itemName in ipairs(items) do
-            if filterText == "" or itemName:lower():find(filterText, 1, true) then
-                local toolBtn = Instance.new("TextButton", ItemScroll)
-                toolBtn.Size = UDim2.new(1, -6, 0, 24)
-                toolBtn.BackgroundColor3 = Color3.fromRGB(30, 34, 44)
-                toolBtn.Text = "  " .. itemName
-                toolBtn.TextColor3 = Color3.fromRGB(220, 220, 240)
-                toolBtn.TextSize = 10
-                toolBtn.Font = Enum.Font.FredokaOne
-                toolBtn.TextXAlignment = Enum.TextXAlignment.Left
-                Instance.new("UICorner", toolBtn).CornerRadius = UDim.new(0, 5)
-
-                toolBtn.MouseButton1Click:Connect(function()
-                    giveTool(itemName)
-                    toolBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 70)
-                    task.delay(0.4, function()
-                        if toolBtn then toolBtn.BackgroundColor3 = Color3.fromRGB(30, 34, 44) end
-                    end)
-                end)
-            end
-        end
-    end
-end
-
-SearchBox:GetPropertyChangedSignal("Text"):Connect(function() populateItemList(SearchBox.Text) end)
 
 -- ==========================================
 -- МОДАЛЬНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ВЫКЛЮЧЕНИЯ
@@ -656,10 +523,17 @@ local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirectio
 MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 125)}):Play()
+        SubMenuFrame.Visible = true
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 130)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
     else
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)}):Play()
+        local tween = TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)})
+        tween:Play()
+        tween.Completed:Connect(function()
+            if not menuOpen then
+                SubMenuFrame.Visible = false
+            end
+        end)
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 0}):Play()
     end
 end)
@@ -693,13 +567,13 @@ end
 -- Перетаскивание блока
 local dragging = false
 local dragMoved = false
-local dragStart, startPos, menuStartPos, subMenuStartPos, itemsStartPos
+local dragStart, startPos, menuStartPos, subMenuStartPos
 
 ToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true; dragMoved = false; dragStart = input.Position
         startPos = ToggleButton.Position; menuStartPos = MenuToggleBtn.Position
-        subMenuStartPos = SubMenuFrame.Position; itemsStartPos = ItemsFrame.Position
+        subMenuStartPos = SubMenuFrame.Position
     end
 end)
 
@@ -711,7 +585,6 @@ UserInputService.InputChanged:Connect(function(input)
             ToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             MenuToggleBtn.Position = UDim2.new(menuStartPos.X.Scale, menuStartPos.X.Offset + delta.X, menuStartPos.Y.Scale, menuStartPos.Y.Offset + delta.Y)
             SubMenuFrame.Position = UDim2.new(subMenuStartPos.X.Scale, subMenuStartPos.X.Offset + delta.X, subMenuStartPos.Y.Scale, subMenuStartPos.Y.Offset + delta.Y)
-            ItemsFrame.Position = UDim2.new(itemsStartPos.X.Scale, itemsStartPos.X.Offset + delta.X, itemsStartPos.Y.Scale, itemsStartPos.Y.Offset + delta.Y)
         end
     end
 end)
@@ -754,7 +627,6 @@ LanguageBtn.MouseButton1Click:Connect(function()
         LanguageBtn.TextColor3 = Color3.fromRGB(120, 200, 255)
         LanguageStroke.Color = Color3.fromRGB(80, 160, 220)
         SetSpawnBtn.Text = "📍 Set Spawn Point"
-        OpenItemsBtn.Text = "📜 Items Catalog"
         UnloadBtn.Text = "⛔ Delete Script"
     else
         currentLanguage = "RU"
@@ -762,18 +634,11 @@ LanguageBtn.MouseButton1Click:Connect(function()
         LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
         LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
         SetSpawnBtn.Text = "📍 Задать спавн"
-        OpenItemsBtn.Text = "📜 Список предметов"
         UnloadBtn.Text = "⛔ Удалить скрипт"
     end
     updateSpawnBtnState(returnToSpawnActive)
 end)
 
-OpenItemsBtn.MouseButton1Click:Connect(function()
-    ItemsFrame.Visible = not ItemsFrame.Visible
-    if ItemsFrame.Visible then populateItemList(SearchBox.Text) end
-end)
-
-CloseItemsBtn.MouseButton1Click:Connect(function() ItemsFrame.Visible = false end)
 UnloadBtn.MouseButton1Click:Connect(function() showUnloadConfirmation() end)
 
 -- Anti-Sit
@@ -887,10 +752,10 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ
+-- ГЛАВНЫЙ ЦИКЛ ИИ (С ДЕТЕКТОРОМ ВЗГЛЯДА)
 -- ==========================================
 safeSpawn(function()
-    print("[BOT]: Обновленный поток ИИ запущен!")
+    print("[BOT]: Поток ИИ успешно запущен!")
     while true do
         safeWait(0.2)
 
@@ -901,8 +766,39 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
-                local threatPos, isFront = checkCartThreat(hrp)
                 local dict = Translations[currentLanguage]
+
+                -- 0. Детектор близкого долгого взгляда игроков!
+                local nearChar, nearPlayer = getNearestPlayer(0, 15)
+                if nearChar and nearChar:FindFirstChild("HumanoidRootPart") then
+                    local tHrp = nearChar.HumanoidRootPart
+                    local dirToBot = (hrp.Position - tHrp.Position)
+
+                    if dirToBot.Magnitude > 0.1 then
+                        local unitDir = dirToBot.Unit
+                        local lookVector = tHrp.CFrame.LookVector
+
+                        -- Если вектор взгляда игрока направлен на бота (скалярное произведение > 0.75)
+                        if unitDir:Dot(lookVector) > 0.75 then
+                            if staringPlayer == nearPlayer then
+                                if tick() - stareStartTime >= 3.5 then
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                    sayMessage(dict.stareBack[math.random(#dict.stareBack)])
+                                    stareStartTime = tick() + 8 -- Задержка от спама репликами
+                                end
+                            else
+                                staringPlayer = nearPlayer
+                                stareStartTime = tick()
+                            end
+                        else
+                            if staringPlayer == nearPlayer then staringPlayer = nil end
+                        end
+                    end
+                else
+                    staringPlayer = nil
+                end
+
+                local threatPos, isFront = checkCartThreat(hrp)
 
                 -- 1. Побег от тележки
                 if threatPos ~= nil then
@@ -1016,4 +912,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Скрипт готов к работе!")
+print("[BOT]: Бот полностью готов к использованию!")
