@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (RU/EN LANGUAGE TOGGLE + FULL UI & DYNAMIC LOCALIZATION)
+-- LIVE SKIN BOT (PRO UI + SCROLLABLE SETTINGS + TEXT FIXES)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного скрипта с выбором языка...")
+print("[BOT]: Запуск обновленного скрипта с улучшенным UI...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -78,7 +78,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (RU & EN)
+-- БАЗА ФРАЗ (ИСПРАВЛЕНА АНГЛИЙСКАЯ ВЕРСИЯ)
 -- ------------------------------------------
 local Translations = {
     RU = {
@@ -145,9 +145,9 @@ local Translations = {
             "shouldn't have eaten that...", "BOOOORIIING", "I can't answer your arguments so sorry", "Obamna", 
             "I have black dots instead of eyes..", "Want to hear a joke? Type \"joke\" or \"commands\" in chat", 
             ":0", "Walking around doing nothing", "RP action sniffed the air", "Bots are people too", "UwU", "I.. I forgot where to go", 
-            "world is so cold..", "Fun fact: this is a fun fact", "guys send hw pls", "I wanna live", 
+            "world is so cold..", "Fun fact: this is a fun fact", "guys send homework pls", "I wanna live", 
             "Everyone is so boring here..", "I'm nobody's dinner...", "😶", "🍞",
-            "Boring.. boring.. just walking wherever my eyes go..", "Why does everyone think bots in rb are evil? It's not that bad..",
+            "Boring.. boring.. just walking wherever my eyes go..", "Why does everyone think bots in roblox are evil? It's not that bad..",
             "If you close your eyes it gets dark", "If you're sad.. don't be", "pharmacies don't sell time because time doesn't heal",
             "This crosshair is OP!", "Cheeki breeki..", "Oh well..", "I am NOT from that other game!", "Going for raspberries who's with me?.. nobody?..",
             "do you know what time it is?"
@@ -177,7 +177,7 @@ local Translations = {
             "7/10 decent, works for me", "9/10 stylish!", "3/10 meh..", "100/10 pure legend!"
         },
         greetings = { "?", "sup", "bye", "hi", "hello", "yo" },
-        botIdentity = { "are you a bot too?", "no i am a screw", "yes of course" },
+        botIdentity = { "are you a bot too?", "no i am a boat", "yes of course" },
         spawnReturn = {
             "Who sent me to Africa? I liked where I was..",
             "Tired of this Brookhaven routine..", "WHAT IS THIS AGAIN BRUH", "Oh.. is this spawn?"
@@ -331,7 +331,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 UI ИНТЕРФЕЙС БОТА
+-- 🖱 УЛУЧШЕННЫЙ UI С КНОПКОЙ "X" И СКРОЛЛОМ
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -345,34 +345,33 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.DisplayOrder = 999999
 ScreenGui.Parent = parentGui
 
--- Главная кнопка ИИ (Гарантированно видимый ✕ с шрифтом SourceSansBold)
+-- Главная кнопка ИИ (Использует чёткую букву X)
 local ToggleButton = Instance.new("TextButton")
 ToggleButton.Name = "BotButton"
-ToggleButton.Size = UDim2.new(0, 52, 0, 52)
+ToggleButton.Size = UDim2.new(0, 50, 0, 50)
 ToggleButton.Position = UDim2.new(0.05, 0, 0.4, 0)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-ToggleButton.Text = "✕"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 60, 60)
-ToggleButton.TextSize = 24
-ToggleButton.Font = Enum.Font.SourceSansBold
+ToggleButton.BackgroundColor3 = Color3.fromRGB(24, 26, 32)
+ToggleButton.Text = "X"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+ToggleButton.TextSize = 20
+ToggleButton.Font = Enum.Font.FredokaOne
 ToggleButton.Active = true
 ToggleButton.Parent = ScreenGui
 
-local BtnCorner = Instance.new("UICorner", ToggleButton)
-BtnCorner.CornerRadius = UDim.new(1, 0)
+Instance.new("UICorner", ToggleButton).CornerRadius = UDim.new(0, 14)
 local BtnStroke = Instance.new("UIStroke", ToggleButton)
-BtnStroke.Thickness = 2
-BtnStroke.Color = Color3.fromRGB(80, 80, 80)
+BtnStroke.Thickness = 1.5
+BtnStroke.Color = Color3.fromRGB(60, 65, 80)
 
--- Кнопка шестеренки (Настройки)
+-- Кнопка шестеренки
 local MenuToggleBtn = Instance.new("TextButton")
 MenuToggleBtn.Name = "MenuToggleBtn"
-MenuToggleBtn.Size = UDim2.new(0, 28, 0, 28)
-MenuToggleBtn.Position = UDim2.new(0.05, 55, 0.4, 12)
-MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+MenuToggleBtn.Size = UDim2.new(0, 26, 0, 26)
+MenuToggleBtn.Position = UDim2.new(0.05, 54, 0.4, 12)
+MenuToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 33, 44)
 MenuToggleBtn.Text = "⚙"
-MenuToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
-MenuToggleBtn.TextSize = 14
+MenuToggleBtn.TextColor3 = Color3.fromRGB(180, 190, 220)
+MenuToggleBtn.TextSize = 13
 MenuToggleBtn.Font = Enum.Font.FredokaOne
 MenuToggleBtn.Active = true
 MenuToggleBtn.Parent = ScreenGui
@@ -380,140 +379,158 @@ MenuToggleBtn.Parent = ScreenGui
 Instance.new("UICorner", MenuToggleBtn).CornerRadius = UDim.new(1, 0)
 local MenuStroke = Instance.new("UIStroke", MenuToggleBtn)
 MenuStroke.Thickness = 1.5
-MenuStroke.Color = Color3.fromRGB(100, 100, 180)
+MenuStroke.Color = Color3.fromRGB(70, 80, 110)
 
--- Выдвижное меню
-local SubMenuFrame = Instance.new("Frame")
+-- Прокручиваемый контейнер для настроек (ScrollingFrame)
+local SubMenuFrame = Instance.new("ScrollingFrame")
 SubMenuFrame.Name = "SubMenuFrame"
-SubMenuFrame.Size = UDim2.new(0, 160, 0, 0)
-SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 58)
-SubMenuFrame.BackgroundTransparency = 1
+SubMenuFrame.Size = UDim2.new(0, 165, 0, 0)
+SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 56)
+SubMenuFrame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+SubMenuFrame.BackgroundTransparency = 0.15
 SubMenuFrame.ClipsDescendants = true
+SubMenuFrame.ScrollBarThickness = 3
+SubMenuFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 150, 255)
 SubMenuFrame.Parent = ScreenGui
+
+Instance.new("UICorner", SubMenuFrame).CornerRadius = UDim.new(0, 10)
+local SubMenuStroke = Instance.new("UIStroke", SubMenuFrame)
+SubMenuStroke.Thickness = 1.5
+SubMenuStroke.Color = Color3.fromRGB(50, 55, 75)
 
 local UIListLayout = Instance.new("UIListLayout", SubMenuFrame)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Padding = UDim.new(0, 6)
+UIListLayout.Padding = UDim.new(0, 5)
+
+local UIPadding = Instance.new("UIPadding", SubMenuFrame)
+UIPadding.PaddingTop = UDim.new(0, 6)
+UIPadding.PaddingBottom = UDim.new(0, 6)
+UIPadding.PaddingLeft = UDim.new(0, 6)
+UIPadding.PaddingRight = UDim.new(0, 6)
+
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    SubMenuFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 12)
+end)
 
 -- 1. Кнопка спавна
 local SpawnToggleBtn = Instance.new("TextButton", SubMenuFrame)
-SpawnToggleBtn.Size = UDim2.new(0, 160, 0, 30)
-SpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(15, 35, 55)
+SpawnToggleBtn.Size = UDim2.new(1, -6, 0, 28)
+SpawnToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 38, 55)
 SpawnToggleBtn.Text = "🏠 Спавн: ВКЛ"
 SpawnToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
-SpawnToggleBtn.TextSize = 11
+SpawnToggleBtn.TextSize = 10
 SpawnToggleBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", SpawnToggleBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", SpawnToggleBtn).CornerRadius = UDim.new(0, 6)
 local SpawnStroke = Instance.new("UIStroke", SpawnToggleBtn)
-SpawnStroke.Thickness = 1.5
-SpawnStroke.Color = Color3.fromRGB(60, 150, 255)
+SpawnStroke.Thickness = 1
+SpawnStroke.Color = Color3.fromRGB(60, 140, 220)
 
 -- 2. Кнопка задать точку спавна
 local SetSpawnBtn = Instance.new("TextButton", SubMenuFrame)
-SetSpawnBtn.Size = UDim2.new(0, 160, 0, 30)
-SetSpawnBtn.BackgroundColor3 = Color3.fromRGB(45, 25, 55)
+SetSpawnBtn.Size = UDim2.new(1, -6, 0, 28)
+SetSpawnBtn.BackgroundColor3 = Color3.fromRGB(42, 28, 52)
 SetSpawnBtn.Text = "📍 Задать спавн"
-SetSpawnBtn.TextColor3 = Color3.fromRGB(255, 150, 255)
-SetSpawnBtn.TextSize = 11
+SetSpawnBtn.TextColor3 = Color3.fromRGB(240, 150, 255)
+SetSpawnBtn.TextSize = 10
 SetSpawnBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", SetSpawnBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", SetSpawnBtn).CornerRadius = UDim.new(0, 6)
 local SetSpawnStroke = Instance.new("UIStroke", SetSpawnBtn)
-SetSpawnStroke.Thickness = 1.5
-SetSpawnStroke.Color = Color3.fromRGB(180, 80, 200)
+SetSpawnStroke.Thickness = 1
+SetSpawnStroke.Color = Color3.fromRGB(170, 80, 200)
 
--- 3. Кнопка переключения языка (RU / EN)
+-- 3. Кнопка переключения языка
 local LanguageBtn = Instance.new("TextButton", SubMenuFrame)
-LanguageBtn.Size = UDim2.new(0, 160, 0, 30)
-LanguageBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+LanguageBtn.Size = UDim2.new(1, -6, 0, 28)
+LanguageBtn.BackgroundColor3 = Color3.fromRGB(35, 36, 48)
 LanguageBtn.Text = "🌐 Язык: RU"
-LanguageBtn.TextColor3 = Color3.fromRGB(220, 200, 120)
-LanguageBtn.TextSize = 11
+LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
+LanguageBtn.TextSize = 10
 LanguageBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", LanguageBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", LanguageBtn).CornerRadius = UDim.new(0, 6)
 local LanguageStroke = Instance.new("UIStroke", LanguageBtn)
-LanguageStroke.Thickness = 1.5
-LanguageStroke.Color = Color3.fromRGB(200, 180, 80)
+LanguageStroke.Thickness = 1
+LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
 
 -- 4. Кнопка каталога предметов
 local OpenItemsBtn = Instance.new("TextButton", SubMenuFrame)
-OpenItemsBtn.Size = UDim2.new(0, 160, 0, 30)
-OpenItemsBtn.BackgroundColor3 = Color3.fromRGB(20, 45, 30)
+OpenItemsBtn.Size = UDim2.new(1, -6, 0, 28)
+OpenItemsBtn.BackgroundColor3 = Color3.fromRGB(22, 45, 32)
 OpenItemsBtn.Text = "📜 Список предметов"
-OpenItemsBtn.TextColor3 = Color3.fromRGB(120, 255, 160)
+OpenItemsBtn.TextColor3 = Color3.fromRGB(120, 240, 160)
 OpenItemsBtn.TextSize = 10
 OpenItemsBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", OpenItemsBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", OpenItemsBtn).CornerRadius = UDim.new(0, 6)
 local OpenItemsStroke = Instance.new("UIStroke", OpenItemsBtn)
-OpenItemsStroke.Thickness = 1.5
-OpenItemsStroke.Color = Color3.fromRGB(80, 220, 120)
+OpenItemsStroke.Thickness = 1
+OpenItemsStroke.Color = Color3.fromRGB(70, 190, 110)
 
 -- 5. Кнопка выключения скрипта
 local UnloadBtn = Instance.new("TextButton", SubMenuFrame)
-UnloadBtn.Size = UDim2.new(0, 160, 0, 30)
-UnloadBtn.BackgroundColor3 = Color3.fromRGB(55, 15, 15)
+UnloadBtn.Size = UDim2.new(1, -6, 0, 28)
+UnloadBtn.BackgroundColor3 = Color3.fromRGB(50, 20, 22)
 UnloadBtn.Text = "⛔ Удалить скрипт"
-UnloadBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+UnloadBtn.TextColor3 = Color3.fromRGB(255, 120, 120)
 UnloadBtn.TextSize = 10
 UnloadBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 6)
 local UnloadStroke = Instance.new("UIStroke", UnloadBtn)
-UnloadStroke.Thickness = 1.5
-UnloadStroke.Color = Color3.fromRGB(220, 60, 60)
+UnloadStroke.Thickness = 1
+UnloadStroke.Color = Color3.fromRGB(200, 70, 70)
 
 -- ==========================================
 -- 🎒 ОКНО ВЫБОРА ПРЕДМЕТОВ (КАТАЛОГ ИВЕНТОВ/VIP)
 -- ==========================================
 local ItemsFrame = Instance.new("Frame", ScreenGui)
 ItemsFrame.Name = "ItemsFrame"
-ItemsFrame.Size = UDim2.new(0, 240, 0, 290)
-ItemsFrame.Position = UDim2.new(0.05, 170, 0.3, 0)
+ItemsFrame.Size = UDim2.new(0, 230, 0, 270)
+ItemsFrame.Position = UDim2.new(0.05, 175, 0.3, 0)
 ItemsFrame.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
 ItemsFrame.Visible = false
 ItemsFrame.Active = true
 
 Instance.new("UICorner", ItemsFrame).CornerRadius = UDim.new(0, 10)
 local ItemsFrameStroke = Instance.new("UIStroke", ItemsFrame)
-ItemsFrameStroke.Thickness = 2
-ItemsFrameStroke.Color = Color3.fromRGB(80, 220, 120)
+ItemsFrameStroke.Thickness = 1.5
+ItemsFrameStroke.Color = Color3.fromRGB(70, 190, 110)
 
 local TitleLabel = Instance.new("TextLabel", ItemsFrame)
 TitleLabel.Size = UDim2.new(1, -30, 0, 30)
 TitleLabel.Position = UDim2.new(0, 10, 0, 5)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "🎒 ИВЕНТЫ & VIP ВЕЩИ"
-TitleLabel.TextColor3 = Color3.fromRGB(120, 255, 160)
-TitleLabel.TextSize = 12
+TitleLabel.TextColor3 = Color3.fromRGB(120, 240, 160)
+TitleLabel.TextSize = 11
 TitleLabel.Font = Enum.Font.FredokaOne
 TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local CloseItemsBtn = Instance.new("TextButton", ItemsFrame)
-CloseItemsBtn.Size = UDim2.new(0, 24, 0, 24)
-CloseItemsBtn.Position = UDim2.new(1, -28, 0, 5)
-CloseItemsBtn.BackgroundColor3 = Color3.fromRGB(40, 20, 20)
-CloseItemsBtn.Text = "✕"
+CloseItemsBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseItemsBtn.Position = UDim2.new(1, -26, 0, 6)
+CloseItemsBtn.BackgroundColor3 = Color3.fromRGB(45, 25, 25)
+CloseItemsBtn.Text = "X"
 CloseItemsBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseItemsBtn.Font = Enum.Font.SourceSansBold
-CloseItemsBtn.TextSize = 12
+CloseItemsBtn.Font = Enum.Font.FredokaOne
+CloseItemsBtn.TextSize = 11
 Instance.new("UICorner", CloseItemsBtn).CornerRadius = UDim.new(0, 6)
 
 local SearchBox = Instance.new("TextBox", ItemsFrame)
-SearchBox.Size = UDim2.new(1, -20, 0, 28)
-SearchBox.Position = UDim2.new(0, 10, 0, 38)
+SearchBox.Size = UDim2.new(1, -20, 0, 26)
+SearchBox.Position = UDim2.new(0, 10, 0, 36)
 SearchBox.BackgroundColor3 = Color3.fromRGB(30, 33, 42)
 SearchBox.PlaceholderText = "🔍 Поиск вещи..."
 SearchBox.PlaceholderColor3 = Color3.fromRGB(120, 130, 150)
 SearchBox.Text = ""
 SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-SearchBox.TextSize = 11
+SearchBox.TextSize = 10
 SearchBox.Font = Enum.Font.FredokaOne
 Instance.new("UICorner", SearchBox).CornerRadius = UDim.new(0, 6)
 
 local ItemScroll = Instance.new("ScrollingFrame", ItemsFrame)
-ItemScroll.Size = UDim2.new(1, -20, 1, -78)
-ItemScroll.Position = UDim2.new(0, 10, 0, 72)
+ItemScroll.Size = UDim2.new(1, -20, 1, -74)
+ItemScroll.Position = UDim2.new(0, 10, 0, 68)
 ItemScroll.BackgroundTransparency = 1
-ItemScroll.ScrollBarThickness = 4
-ItemScroll.ScrollBarImageColor3 = Color3.fromRGB(80, 220, 120)
+ItemScroll.ScrollBarThickness = 3
+ItemScroll.ScrollBarImageColor3 = Color3.fromRGB(70, 190, 110)
 
 local ScrollLayout = Instance.new("UIListLayout", ItemScroll)
 ScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -540,7 +557,7 @@ local function populateItemList(filterText)
 
     for catName, items in pairs(RareItemsList) do
         local catHeader = Instance.new("TextLabel", ItemScroll)
-        catHeader.Size = UDim2.new(1, 0, 0, 20)
+        catHeader.Size = UDim2.new(1, 0, 0, 18)
         catHeader.BackgroundTransparency = 1
         catHeader.Text = catName
         catHeader.TextColor3 = Color3.fromRGB(255, 200, 100)
@@ -552,19 +569,19 @@ local function populateItemList(filterText)
             if filterText == "" or itemName:lower():find(filterText, 1, true) then
                 local toolBtn = Instance.new("TextButton", ItemScroll)
                 toolBtn.Size = UDim2.new(1, -6, 0, 24)
-                toolBtn.BackgroundColor3 = Color3.fromRGB(32, 36, 46)
+                toolBtn.BackgroundColor3 = Color3.fromRGB(30, 34, 44)
                 toolBtn.Text = "  " .. itemName
                 toolBtn.TextColor3 = Color3.fromRGB(220, 220, 240)
                 toolBtn.TextSize = 10
                 toolBtn.Font = Enum.Font.FredokaOne
                 toolBtn.TextXAlignment = Enum.TextXAlignment.Left
-                Instance.new("UICorner", toolBtn).CornerRadius = UDim.new(0, 6)
+                Instance.new("UICorner", toolBtn).CornerRadius = UDim.new(0, 5)
 
                 toolBtn.MouseButton1Click:Connect(function()
                     giveTool(itemName)
                     toolBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 70)
                     task.delay(0.4, function()
-                        if toolBtn then toolBtn.BackgroundColor3 = Color3.fromRGB(32, 36, 46) end
+                        if toolBtn then toolBtn.BackgroundColor3 = Color3.fromRGB(30, 34, 44) end
                     end)
                 end)
             end
@@ -585,24 +602,24 @@ local function showUnloadConfirmation()
     confirmOverlay.ZIndex = 1000
 
     local confirmBox = Instance.new("Frame", confirmOverlay)
-    confirmBox.Size = UDim2.new(0, 280, 0, 140)
-    confirmBox.Position = UDim2.new(0.5, -140, 0.5, -70)
-    confirmBox.BackgroundColor3 = Color3.fromRGB(25, 27, 35)
+    confirmBox.Size = UDim2.new(0, 260, 0, 130)
+    confirmBox.Position = UDim2.new(0.5, -130, 0.5, -65)
+    confirmBox.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
     Instance.new("UICorner", confirmBox).CornerRadius = UDim.new(0, 10)
 
     local warnText = Instance.new("TextLabel", confirmBox)
-    warnText.Size = UDim2.new(1, -20, 0, 60)
+    warnText.Size = UDim2.new(1, -20, 0, 55)
     warnText.Position = UDim2.new(0, 10, 0, 10)
     warnText.Text = currentLanguage == "RU" and "Вы уверены?\nЕсли вы выключите скрипт, бот отключится!" or "Are you sure?\nIf you turn off the script, the bot will stop!"
     warnText.TextColor3 = Color3.fromRGB(255, 200, 100)
     warnText.Font = Enum.Font.FredokaOne
-    warnText.TextSize = 12
+    warnText.TextSize = 11
     warnText.TextWrapped = true
     warnText.BackgroundTransparency = 1
 
     local yesBtn = Instance.new("TextButton", confirmBox)
-    yesBtn.Size = UDim2.new(0.4, 0, 0, 32)
-    yesBtn.Position = UDim2.new(0.08, 0, 0.65, 0)
+    yesBtn.Size = UDim2.new(0.4, 0, 0, 30)
+    yesBtn.Position = UDim2.new(0.08, 0, 0.62, 0)
     yesBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
     yesBtn.Text = currentLanguage == "RU" and "Да" or "Yes"
     yesBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -610,8 +627,8 @@ local function showUnloadConfirmation()
     Instance.new("UICorner", yesBtn).CornerRadius = UDim.new(0, 6)
 
     local noBtn = Instance.new("TextButton", confirmBox)
-    noBtn.Size = UDim2.new(0.4, 0, 0, 32)
-    noBtn.Position = UDim2.new(0.52, 0, 0.65, 0)
+    noBtn.Size = UDim2.new(0.4, 0, 0, 30)
+    noBtn.Position = UDim2.new(0.52, 0, 0.62, 0)
     noBtn.BackgroundColor3 = Color3.fromRGB(50, 55, 70)
     noBtn.Text = currentLanguage == "RU" and "Нет" or "Cancel"
     noBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -639,10 +656,10 @@ local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirectio
 MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 160, 0, 175)}):Play()
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 125)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
     else
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 160, 0, 0)}):Play()
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 0}):Play()
     end
 end)
@@ -653,9 +670,9 @@ local function updateUIState(active)
         ToggleButton.TextColor3 = Color3.fromRGB(60, 255, 120)
         TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(60, 255, 120)}):Play()
     else
-        ToggleButton.Text = "✕"
-        ToggleButton.TextColor3 = Color3.fromRGB(255, 60, 60)
-        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(255, 60, 60)}):Play()
+        ToggleButton.Text = "X"
+        ToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+        TweenService:Create(BtnStroke, tweenInfo, {Color = Color3.fromRGB(60, 65, 80)}):Play()
     end
 end
 
@@ -663,17 +680,17 @@ local function updateSpawnBtnState(enabled)
     if enabled then
         SpawnToggleBtn.Text = currentLanguage == "RU" and "🏠 Спавн: ВКЛ" or "🏠 Spawn: ON"
         SpawnToggleBtn.TextColor3 = Color3.fromRGB(100, 200, 255)
-        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(15, 35, 55)}):Play()
-        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(60, 150, 255)}):Play()
+        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(25, 38, 55)}):Play()
+        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(60, 140, 220)}):Play()
     else
         SpawnToggleBtn.Text = currentLanguage == "RU" and "🏠 Спавн: ВЫКЛ" or "🏠 Spawn: OFF"
-        SpawnToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}):Play()
-        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(100, 100, 100)}):Play()
+        SpawnToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(30, 32, 40)}):Play()
+        TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(80, 80, 95)}):Play()
     end
 end
 
--- Перетаскивание всего блока
+-- Перетаскивание блока
 local dragging = false
 local dragMoved = false
 local dragStart, startPos, menuStartPos, subMenuStartPos, itemsStartPos
@@ -742,8 +759,8 @@ LanguageBtn.MouseButton1Click:Connect(function()
     else
         currentLanguage = "RU"
         LanguageBtn.Text = "🌐 Язык: RU"
-        LanguageBtn.TextColor3 = Color3.fromRGB(220, 200, 120)
-        LanguageStroke.Color = Color3.fromRGB(200, 180, 80)
+        LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
+        LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
         SetSpawnBtn.Text = "📍 Задать спавн"
         OpenItemsBtn.Text = "📜 Список предметов"
         UnloadBtn.Text = "⛔ Удалить скрипт"
@@ -779,7 +796,7 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (РАБОТАЕТ НА ОБОИХ ЯЗЫКАХ)
+-- ОБРАБОТКА ЧАТА
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or senderPlayer == LocalPlayer then return end
@@ -873,7 +890,7 @@ end)
 -- ГЛАВНЫЙ ЦИКЛ ИИ
 -- ==========================================
 safeSpawn(function()
-    print("[BOT]: Поток ИИ с поддержкой двух языков запущен!")
+    print("[BOT]: Обновленный поток ИИ запущен!")
     while true do
         safeWait(0.2)
 
@@ -999,4 +1016,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Всё работает идеально!")
+print("[BOT]: Скрипт готов к работе!")
