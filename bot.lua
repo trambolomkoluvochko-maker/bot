@@ -1,5 +1,5 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + STARE DETECTION + CLEAN CODE)
+-- LIVE SKIN BOT (PRO UI + FIXED STARE DETECTION & TEXT UPDATES)
 -- ==========================================
 
 print("[BOT]: Запуск обновленной версии бота...")
@@ -82,7 +82,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (С НОВОЙ РЕАКЦИЕЙ НА ВЗГЛЯД)
+-- БАЗА ФРАЗ (ОБНОВЛЕНЫ МЕМНЫЕ ФРАЗЫ)
 -- ------------------------------------------
 local Translations = {
     RU = {
@@ -102,7 +102,7 @@ local Translations = {
         },
         playerStare = {
             "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
-            "Э ты че на нашем районе потерял?", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", 
+            "СМЕНИ ОБРАЗ ЖИЗНИ А НЕ СКИН!", "._.", "Я к тебе подходил уже или нет?..", "ПрЕвЕт МеЛкИй Че ДеЛаЕшЬ?", 
             "Выглядишь странно..", "АФИГЕТ Я ДАЖЕ НЕЗ КАК ТВОЙ СКИН ВЫГЛЯДИТ!", "Бу", "Живой нет?"
         },
         stareBack = {
@@ -164,7 +164,7 @@ local Translations = {
         },
         playerStare = {
             "You know.. sometimes finding that soulmate isn't easy", "Still changing your outfit huh?", "🤨", "AFK? I guess so..", 
-            "Hey what are you lost in our neighborhood for?", "._.", "Did I approach you already or not?..", "HeLlo LiTtLe OnE wHaT u DoInG?", 
+            "CHANGE YOUR LIFESTYLE, NOT YOUR SKIN!", "._.", "Did I approach you already or not?..", "HeLlo LiTtLe OnE wHaT u DoInG?", 
             "You look weird..", "OMG I DON'T EVEN KNOW WHAT YOUR SKIN LOOKS LIKE!", "Boo!", "Alive or what?"
         },
         stareBack = {
@@ -324,7 +324,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 ЧИСТЫЙ И ИДЕАЛЬНЫЙ UI ИНТЕРФЕЙС
+-- 🖱 UI ИНТЕРФЕЙС БОТА
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -374,7 +374,7 @@ local MenuStroke = Instance.new("UIStroke", MenuToggleBtn)
 MenuStroke.Thickness = 1.5
 MenuStroke.Color = Color3.fromRGB(70, 80, 110)
 
--- Прокручиваемый контейнер для настроек (SubMenuFrame)
+-- Настройки (ScrollingFrame)
 local SubMenuFrame = Instance.new("ScrollingFrame")
 SubMenuFrame.Name = "SubMenuFrame"
 SubMenuFrame.Size = UDim2.new(0, 165, 0, 0)
@@ -382,7 +382,7 @@ SubMenuFrame.Position = UDim2.new(0.05, 0, 0.4, 56)
 SubMenuFrame.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
 SubMenuFrame.BackgroundTransparency = 0.15
 SubMenuFrame.ClipsDescendants = true
-SubMenuFrame.Visible = false -- Исправлен баг торчащих настроек!
+SubMenuFrame.Visible = false
 SubMenuFrame.ScrollBarThickness = 3
 SubMenuFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 150, 255)
 SubMenuFrame.Parent = ScreenGui
@@ -530,9 +530,7 @@ MenuToggleBtn.MouseButton1Click:Connect(function()
         local tween = TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)})
         tween:Play()
         tween.Completed:Connect(function()
-            if not menuOpen then
-                SubMenuFrame.Visible = false
-            end
+            if not menuOpen then SubMenuFrame.Visible = false end
         end)
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 0}):Play()
     end
@@ -752,7 +750,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ (С ДЕТЕКТОРОМ ВЗГЛЯДА)
+-- ГЛАВНЫЙ ЦИКЛ ИИ (С УЛУЧШЕННЫМ ДЕТЕКТОРОМ ВЗГЛЯДА 8s)
 -- ==========================================
 safeSpawn(function()
     print("[BOT]: Поток ИИ успешно запущен!")
@@ -768,8 +766,8 @@ safeSpawn(function()
 
                 local dict = Translations[currentLanguage]
 
-                -- 0. Детектор близкого долгого взгляда игроков!
-                local nearChar, nearPlayer = getNearestPlayer(0, 15)
+                -- 0. ТОЧНЫЙ ДЕТЕКТОР ВЗГЛЯДА (<= 6 студов + 8 секунд удерживания взгляда)
+                local nearChar, nearPlayer = getNearestPlayer(0, 6)
                 if nearChar and nearChar:FindFirstChild("HumanoidRootPart") then
                     local tHrp = nearChar.HumanoidRootPart
                     local dirToBot = (hrp.Position - tHrp.Position)
@@ -778,24 +776,39 @@ safeSpawn(function()
                         local unitDir = dirToBot.Unit
                         local lookVector = tHrp.CFrame.LookVector
 
-                        -- Если вектор взгляда игрока направлен на бота (скалярное произведение > 0.75)
+                        -- Если игрок смотрит строго на бота
                         if unitDir:Dot(lookVector) > 0.75 then
                             if staringPlayer == nearPlayer then
-                                if tick() - stareStartTime >= 3.5 then
-                                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                                if tick() - stareStartTime >= 8 then
+                                    -- Плавный поворот к игроку через Lerp
+                                    local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                    for i = 1, 10 do
+                                        if hrp and tHrp then
+                                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.25)
+                                        end
+                                        safeWait(0.03)
+                                    end
+
                                     sayMessage(dict.stareBack[math.random(#dict.stareBack)])
-                                    stareStartTime = tick() + 8 -- Задержка от спама репликами
+                                    staringPlayer = nil
+                                    stareStartTime = 0
                                 end
                             else
                                 staringPlayer = nearPlayer
                                 stareStartTime = tick()
                             end
                         else
-                            if staringPlayer == nearPlayer then staringPlayer = nil end
+                            -- Игрок отвел взгляд -> мгновенный сброс таймера!
+                            if staringPlayer == nearPlayer then
+                                staringPlayer = nil
+                                stareStartTime = 0
+                            end
                         end
                     end
                 else
+                    -- Отошел дальше 6 студов -> сброс таймера
                     staringPlayer = nil
+                    stareStartTime = 0
                 end
 
                 local threatPos, isFront = checkCartThreat(hrp)
@@ -852,11 +865,12 @@ safeSpawn(function()
 
                         if actionChance <= 2 then
                             local targetChar = getNearestPlayer(12, 55)
-                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                            -- Фикс конфликта с пристальным взглядом близкого игрока!
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
                                 local observeStart = tick()
 
-                                while tick() - observeStart < 8 and botActive and not followingPlayer do
+                                while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer do
                                     if tHrp and hrp then
                                         local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
                                         hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
@@ -912,4 +926,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Бот полностью готов к использованию!")
+print("[BOT]: Обновленная версия успешно загружена!")
