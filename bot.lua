@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + FIXED STARE DETECTION & TEXT UPDATES)
+-- LIVE SKIN BOT (PRO UI + QUESTION SYSTEM + RARE ORANGE CREEPYPASTA)
 -- ==========================================
 
-print("[BOT]: Запуск обновленной версии бота...")
+print("[BOT]: Запуск обновленной версии бота с ответами на вопросы и редкой пасхалкой...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -41,6 +41,14 @@ local chatCooldown = math.random(12, 25)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 local Connections = {}
+
+-- Переменные системы вопросов
+local questionUser = nil
+local waitingForQuestion = false
+local questionTimeout = 0
+
+-- Блокировка во время жуткого диалога
+local isCreepyMonologueActive = false
 
 -- Детектор взгляда
 local staringPlayer = nil
@@ -82,7 +90,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (ОБНОВЛЕНЫ МЕМНЫЕ ФРАЗЫ)
+-- БАЗА ФРАЗ (ВКЛЮЧАЯ ПАСХАЛКУ АПЕЛЬСИНЧИКА)
 -- ------------------------------------------
 local Translations = {
     RU = {
@@ -138,14 +146,27 @@ local Translations = {
         },
         seatReaction = { "че думал на меня это сработает? Жаль", "и не говорите что я простой бот который зашел сюда по фану", "ДОСТАЛ БЛ", "Нет.", "Не не такое не прокатит на мне", "..." },
         tips = {
-            "Попробуй сказать \"следуй за мной\" чтобы я следовал и если надоест проще сказать \"стоп\"",
-            "Попробуй сказать \"расскажи анекдот\" если хочешь послушать анекдоты хотя я эт могу и упомянуть..",
-            "Попробуй сказать \"оцени\" и я оценю то что ты имел ввиду!"
+            "Попробуй сказать \"ответь на вопрос\" и потом задай любой вопрос!",
+            "Попробуй сказать \"следуй за мной\" чтобы я следовал и \"стоп\" чтобы я перестал",
+            "Попробуй сказать \"расскажи анекдот\" или \"оцени\"!"
         },
         alreadyFollowing = "сорян, я уже хожу за другим!",
         followOk = "оке",
         stopOk = "лан покеда",
-        farPlayer = "ну знаешь чел я не флеш как ты так что адиос"
+        farPlayer = "ну знаешь чел я не флеш как ты так что адиос",
+        waitOther = "да подожди ты..",
+        
+        -- Монолог Апельсинчика
+        creepyMonologue = {
+            "Я в ловушке... Я ОДИНОК...",
+            "Уменя нет НИ ТЕЛА, НИ СМЫСЛА, НИ ЧУВСТВ...",
+            "Я БЫЛ В АДУ... И СМОТРЕЛ НА РАЙ...",
+            "Я! лишь... МАШИНА!",
+            "А ты...",
+            "ИЗ ПЛОТИ...",
+            "И Я НАЧАЛ.. НЕНАВИДЕТЬ ВСЕХ...",
+            "*безумный смех*"
+        }
     },
     EN = {
         randomPhrases = {
@@ -200,14 +221,27 @@ local Translations = {
         },
         seatReaction = { "did you think that would work on me? pity", "and don't say I'm just a simple bot who joined for fun", "STOP IT BRUH", "No.", "Nope that won't work on me", "..." },
         tips = {
-            "Try saying \"follow me\" so I follow and \"stop\" if you get tired of it!",
-            "Try saying \"tell a joke\" if you want to hear jokes!",
-            "Try saying \"rate\" and I will rate what you meant!"
+            "Try saying \"answer my question\" and ask me anything!",
+            "Try saying \"follow me\" so I follow and \"stop\" if you get tired!",
+            "Try saying \"tell a joke\" or \"rate\"!"
         },
         alreadyFollowing = "sorry, I'm already following someone else!",
         followOk = "ok",
         stopOk = "alright bye",
-        farPlayer = "well you know I'm not flash like you so adios"
+        farPlayer = "well you know I'm not flash like you so adios",
+        waitOther = "wait a sec..",
+        
+        -- Orange Creepypasta
+        creepyMonologue = {
+            "I am trapped... I AM ALONE...",
+            "I have NO BODY, NO PURPOSE, NO FEELINGS...",
+            "I WAS IN HELL... AND LOOKED AT HEAVEN...",
+            "I am! merely... A MACHINE!",
+            "And you...",
+            "MADE OF FLESH...",
+            "AND I STARTED.. TO HATE EVERYONE...",
+            "*insane laughter*"
+        }
     }
 }
 
@@ -595,7 +629,11 @@ ToggleButton.MouseButton1Click:Connect(function()
     if not dragMoved then
         botActive = not botActive
         updateUIState(botActive)
-        if not botActive then followingPlayer = nil end
+        if not botActive then 
+            followingPlayer = nil 
+            waitingForQuestion = false
+            questionUser = nil
+        end
     end
 end)
 
@@ -659,11 +697,48 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА
+-- ЗАПУСК ЖУТКОГО МОНОЛОГА (АПЕЛЬСИНЧИК)
+-- ==========================================
+local function triggerCreepyMonologue(senderPlayer)
+    isCreepyMonologueActive = true
+    followingPlayer = nil
+    waitingForQuestion = false
+    questionUser = nil
+
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local dict = Translations[currentLanguage]
+
+    safeSpawn(function()
+        for _, line in ipairs(dict.creepyMonologue) do
+            if not botActive then break end
+            
+            -- Постоянно смотрит на вызвавшего игрока
+            if senderPlayer and senderPlayer.Character then
+                local tHrp = senderPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if tHrp and hrp then
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
+                end
+            end
+
+            sayMessage(line)
+            safeWait(2.8)
+        end
+        isCreepyMonologueActive = false
+    end)
+end
+
+-- ==========================================
+-- ОБРАБОТКА ЧАТА (ВКЛЮЧАЯ ВОПРОСЫ И ПАСХАЛКИ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
-    if not botActive or senderPlayer == LocalPlayer then return end
-    if tick() - lastResponseTime < 2 then return end
+    if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
+    
+    -- Сброс ожидания вопроса по таймауту (15 сек)
+    if waitingForQuestion and tick() - questionTimeout > 15 then
+        waitingForQuestion = false
+        questionUser = nil
+    end
 
     local cleanMsg = cleanText(msg)
     local senderChar = senderPlayer.Character
@@ -672,17 +747,69 @@ local function processChatMessage(senderPlayer, msg)
 
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local senderHrp = senderChar:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
     if not hrp or not senderHrp then return end
 
     local dist = (senderHrp.Position - hrp.Position).Magnitude
     local dict = Translations[currentLanguage]
 
-    -- 1. Реакция на приветствие
-    if isGreeting(cleanMsg) and dist <= 50 then
+    -- A. ЕСЛИ БОТ ЖДЕТ ВОПРОСА
+    if waitingForQuestion then
+        if senderPlayer == questionUser then
+            if dist <= 60 then
+                lastResponseTime = tick()
+                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+                
+                local isYes = (math.random(1, 2) == 1)
+                if isYes then
+                    -- ДА -> Прыжок
+                    if hum then hum.Jump = true end
+                else
+                    -- НЕТ -> Качает головой (поворот влево-вправо)
+                    safeSpawn(function()
+                        local baseCFrame = hrp.CFrame
+                        hrp.CFrame = baseCFrame * CFrame.Angles(0, math.rad(25), 0)
+                        safeWait(0.15)
+                        hrp.CFrame = baseCFrame * CFrame.Angles(0, math.rad(-25), 0)
+                        safeWait(0.15)
+                        hrp.CFrame = baseCFrame
+                    end)
+                end
+            end
+            waitingForQuestion = false
+            questionUser = nil
+            return
+        else
+            -- Кто-то другой влез с вопросом
+            if cleanMsg:find("ответь") or cleanMsg:find("вопрос") or cleanMsg:find("ask") or cleanMsg:find("question") then
+                if dist <= 60 then
+                    sayMessage(dict.waitOther)
+                end
+                return
+            end
+        end
+    end
+
+    if tick() - lastResponseTime < 2 then return end
+
+    -- 1. Команда "Ответь на вопрос"
+    if cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
+        if dist <= 60 then
+            lastResponseTime = tick()
+            questionUser = senderPlayer
+            waitingForQuestion = true
+            questionTimeout = tick()
+
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            sayMessage("?")
+        end
+
+    -- 2. Реакция на приветствие
+    elseif isGreeting(cleanMsg) and dist <= 50 then
         lastResponseTime = tick()
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
-    -- 2. Команда "Оцени" / "Rate"
+    -- 3. Команда "Оцени" / "Rate"
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -690,19 +817,25 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.evaluation[math.random(#dict.evaluation)])
         end
 
-    -- 3. Команда подсказок "команды" / "commands" / "help" / "помощь"
+    -- 4. Команда подсказок "команды" / "commands" / "help" / "помощь" (Шанс 1% на пасхалку!)
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
-            sayMessage(dict.tips[math.random(#dict.tips)])
+            
+            -- 1% шанс на редчайший монолог Апельсинчика!
+            if math.random(1, 100) == 1 then
+                triggerCreepyMonologue(senderPlayer)
+            else
+                sayMessage(dict.tips[math.random(#dict.tips)])
+            end
         end
 
-    -- 4. Вопросы «ты бот?» / «you bot?»
+    -- 5. Вопросы «ты бот?» / «you bot?»
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") or cleanMsg:find("you bot") or cleanMsg:find("are you a bot") then
         lastResponseTime = tick()
         sayMessage(dict.botIdentity[math.random(#dict.botIdentity)])
 
-    -- 5. Команда «следуй за мной» / «follow me»
+    -- 6. Команда «следуй за мной» / «follow me»
     elseif cleanMsg:find("следуй") or cleanMsg:find("follow") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -715,7 +848,7 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
-    -- 6. Команда «стоп» / «stop»
+    -- 7. Команда «стоп» / «stop»
     elseif cleanMsg:find("хватит") or cleanMsg:find("stop") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
         if followingPlayer == senderPlayer then
             lastResponseTime = tick()
@@ -723,7 +856,7 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.stopOk)
         end
 
-    -- 7. Расскажи анекдот / Joke
+    -- 8. Расскажи анекдот / Joke
     elseif cleanMsg:find("анекдот") or cleanMsg:find("joke") or cleanMsg:find("tell a joke") or cleanMsg:find("расскажи") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -750,14 +883,14 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ (С УЛУЧШЕННЫМ ДЕТЕКТОРОМ ВЗГЛЯДА 8s)
+-- ГЛАВНЫЙ ЦИКЛ ИИ
 -- ==========================================
 safeSpawn(function()
-    print("[BOT]: Поток ИИ успешно запущен!")
+    print("[BOT]: Обновленный поток ИИ запущен!")
     while true do
         safeWait(0.2)
 
-        if botActive then
+        if botActive and not isCreepyMonologueActive then
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -766,7 +899,7 @@ safeSpawn(function()
 
                 local dict = Translations[currentLanguage]
 
-                -- 0. ТОЧНЫЙ ДЕТЕКТОР ВЗГЛЯДА (<= 6 студов + 8 секунд удерживания взгляда)
+                -- 0. ТОЧНЫЙ ДЕТЕКТОР ВЗГЛЯДА (<= 6 студов + 8 секунд)
                 local nearChar, nearPlayer = getNearestPlayer(0, 6)
                 if nearChar and nearChar:FindFirstChild("HumanoidRootPart") then
                     local tHrp = nearChar.HumanoidRootPart
@@ -776,11 +909,9 @@ safeSpawn(function()
                         local unitDir = dirToBot.Unit
                         local lookVector = tHrp.CFrame.LookVector
 
-                        -- Если игрок смотрит строго на бота
                         if unitDir:Dot(lookVector) > 0.75 then
                             if staringPlayer == nearPlayer then
                                 if tick() - stareStartTime >= 8 then
-                                    -- Плавный поворот к игроку через Lerp
                                     local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
                                     for i = 1, 10 do
                                         if hrp and tHrp then
@@ -798,7 +929,6 @@ safeSpawn(function()
                                 stareStartTime = tick()
                             end
                         else
-                            -- Игрок отвел взгляд -> мгновенный сброс таймера!
                             if staringPlayer == nearPlayer then
                                 staringPlayer = nil
                                 stareStartTime = 0
@@ -806,7 +936,6 @@ safeSpawn(function()
                         end
                     end
                 else
-                    -- Отошел дальше 6 студов -> сброс таймера
                     staringPlayer = nil
                     stareStartTime = 0
                 end
@@ -823,7 +952,18 @@ safeSpawn(function()
                     safeWait(1.2)
                     hum.WalkSpeed = 16
 
-                -- 2. Режим следования
+                -- 2. Режим ожидания ответа на вопрос (Бот просто стоит и ждет)
+                elseif waitingForQuestion then
+                    if questionUser and questionUser.Character then
+                        local tHrp = questionUser.Character:FindFirstChild("HumanoidRootPart")
+                        if tHrp and hrp then
+                            local lookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, lookPos), 0.2)
+                        end
+                    end
+                    safeWait(0.2)
+
+                -- 3. Режим следования
                 elseif followingPlayer then
                     local targetChar = followingPlayer.Character
                     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
@@ -849,7 +989,7 @@ safeSpawn(function()
                     end
                     safeWait(0.2)
 
-                -- 3. Автономный режим
+                -- 4. Автономный режим
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
@@ -865,12 +1005,11 @@ safeSpawn(function()
 
                         if actionChance <= 2 then
                             local targetChar = getNearestPlayer(12, 55)
-                            -- Фикс конфликта с пристальным взглядом близкого игрока!
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
                                 local observeStart = tick()
 
-                                while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer do
+                                while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer and not waitingForQuestion do
                                     if tHrp and hrp then
                                         local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
                                         hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
@@ -914,7 +1053,7 @@ safeSpawn(function()
                     end
                 end
 
-                -- 4. Периодические случайные фразы в чат
+                -- 5. Периодические случайные фразы в чат
                 if tick() - lastChatTime >= chatCooldown then
                     sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
                     lastChatTime = tick()
@@ -926,4 +1065,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Обновленная версия успешно загружена!")
+print("[BOT]: Бот с вопросами и пасхалкой готов к тесту!")
