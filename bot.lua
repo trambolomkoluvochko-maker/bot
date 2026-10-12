@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + HEAD SHAKE + CREEPY TREMBLE + LEMONCHIK SYSTEM)
+-- LIVE SKIN BOT (PRO UI + SITTING ANIMATION + LEMONCHIK TOGGLE)
 -- ==========================================
 
-print("[BOT]: Запуск продвинутой версии бота с тряской и системой ботов...")
+print("[BOT]: Запуск обновленной версии бота...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -34,6 +34,7 @@ end
 
 local botActive = false
 local returnToSpawnActive = true
+local lemonchikActive = true -- Переключатель для сестры (Лемончик36)
 local currentLanguage = "RU" -- "RU" или "EN"
 local lastChatTime = tick()
 local lastResponseTime = 0
@@ -47,7 +48,7 @@ local questionUser = nil
 local waitingForQuestion = false
 local questionTimeout = 0
 
--- Блокировка во время жуткого диалога
+-- Блокировка во время монолога
 local isCreepyMonologueActive = false
 
 -- Детектор взгляда
@@ -459,6 +460,19 @@ local SetSpawnStroke = Instance.new("UIStroke", SetSpawnBtn)
 SetSpawnStroke.Thickness = 1
 SetSpawnStroke.Color = Color3.fromRGB(170, 80, 200)
 
+-- КНОПКА ВКЛ/ВЫКЛ ДИАЛОГА С ЛЕМОНЧИКОМ
+local LemonToggleBtn = Instance.new("TextButton", SubMenuFrame)
+LemonToggleBtn.Size = UDim2.new(1, -6, 0, 28)
+LemonToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 20)
+LemonToggleBtn.Text = "🍋 Лемончик: ВКЛ"
+LemonToggleBtn.TextColor3 = Color3.fromRGB(255, 240, 100)
+LemonToggleBtn.TextSize = 10
+LemonToggleBtn.Font = Enum.Font.FredokaOne
+Instance.new("UICorner", LemonToggleBtn).CornerRadius = UDim.new(0, 6)
+local LemonStroke = Instance.new("UIStroke", LemonToggleBtn)
+LemonStroke.Thickness = 1
+LemonStroke.Color = Color3.fromRGB(200, 190, 60)
+
 local LanguageBtn = Instance.new("TextButton", SubMenuFrame)
 LanguageBtn.Size = UDim2.new(1, -6, 0, 28)
 LanguageBtn.BackgroundColor3 = Color3.fromRGB(35, 36, 48)
@@ -581,6 +595,20 @@ local function updateSpawnBtnState(enabled)
     end
 end
 
+local function updateLemonBtnState(enabled)
+    if enabled then
+        LemonToggleBtn.Text = currentLanguage == "RU" and "🍋 Лемончик: ВКЛ" or "🍋 Lemonchik: ON"
+        LemonToggleBtn.TextColor3 = Color3.fromRGB(255, 240, 100)
+        TweenService:Create(LemonToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(45, 45, 20)}):Play()
+        TweenService:Create(LemonStroke, tweenInfo, {Color = Color3.fromRGB(200, 190, 60)}):Play()
+    else
+        LemonToggleBtn.Text = currentLanguage == "RU" and "🍋 Лемончик: ВЫКЛ" or "🍋 Lemonchik: OFF"
+        LemonToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+        TweenService:Create(LemonToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(30, 32, 40)}):Play()
+        TweenService:Create(LemonStroke, tweenInfo, {Color = Color3.fromRGB(80, 80, 95)}):Play()
+    end
+end
+
 local dragging = false
 local dragMoved = false
 local dragStart, startPos, menuStartPos, subMenuStartPos
@@ -626,6 +654,11 @@ SpawnToggleBtn.MouseButton1Click:Connect(function()
     updateSpawnBtnState(returnToSpawnActive)
 end)
 
+LemonToggleBtn.MouseButton1Click:Connect(function()
+    lemonchikActive = not lemonchikActive
+    updateLemonBtnState(lemonchikActive)
+end)
+
 SetSpawnBtn.MouseButton1Click:Connect(function()
     if returnToSpawnActive then
         local char = LocalPlayer.Character
@@ -656,6 +689,7 @@ LanguageBtn.MouseButton1Click:Connect(function()
         UnloadBtn.Text = "⛔ Удалить скрипт"
     end
     updateSpawnBtnState(returnToSpawnActive)
+    updateLemonBtnState(lemonchikActive)
 end)
 
 UnloadBtn.MouseButton1Click:Connect(function() showUnloadConfirmation() end)
@@ -679,7 +713,7 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ==========================================
--- ЗАПУСК ЖУТКОГО МОНОЛОГА С ТРЯСКОЙ (АПЕЛЬСИНЧИК)
+-- ЗАПУСК ЖУТКОГО МОНОЛОГА С ТРЯСКОЙ
 -- ==========================================
 local function triggerCreepyMonologue(senderPlayer)
     isCreepyMonologueActive = true
@@ -700,7 +734,6 @@ local function triggerCreepyMonologue(senderPlayer)
                 tHrp = senderPlayer.Character:FindFirstChild("HumanoidRootPart")
             end
 
-            -- Эффект тряски (влево-вправо) перед каждой фразой
             for s = 1, 6 do
                 if hrp and tHrp then
                     local baseCF = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
@@ -718,7 +751,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (СИСТЕМА ВОПРОСОВ И ПАСХАЛКИ)
+-- ОБРАБОТКА ЧАТА
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
@@ -741,7 +774,6 @@ local function processChatMessage(senderPlayer, msg)
     local dist = (senderHrp.Position - hrp.Position).Magnitude
     local dict = Translations[currentLanguage]
 
-    -- A. ЕСЛИ БОТ ЖДЕТ ВОПРОСА
     if waitingForQuestion then
         if senderPlayer == questionUser then
             if dist <= 60 then
@@ -750,10 +782,8 @@ local function processChatMessage(senderPlayer, msg)
                 
                 local isYes = (math.random(1, 2) == 1)
                 if isYes then
-                    -- ДА -> Прыжок
                     if hum then hum.Jump = true end
                 else
-                    -- НЕТ -> Плавное качание головой (влево-вправо несколько раз)
                     safeSpawn(function()
                         local tPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
                         local baseCF = CFrame.lookAt(hrp.Position, tPos)
@@ -782,7 +812,6 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
-    -- 1. Команда "Ответь на вопрос"
     if cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -794,12 +823,10 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage("?")
         end
 
-    -- 2. Реакция на приветствие
     elseif isGreeting(cleanMsg) and dist <= 50 then
         lastResponseTime = tick()
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
-    -- 3. Команда "Оцени" / "Rate"
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -807,7 +834,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.evaluation[math.random(#dict.evaluation)])
         end
 
-    -- 4. Команда подсказок (Шанс 1% на монолог Апельсинчика!)
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -819,12 +845,10 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
-    -- 5. Вопросы «ты бот?»
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") or cleanMsg:find("you bot") or cleanMsg:find("are you a bot") then
         lastResponseTime = tick()
         sayMessage(dict.botIdentity[math.random(#dict.botIdentity)])
 
-    -- 6. Команда «следуй за мной»
     elseif cleanMsg:find("следуй") or cleanMsg:find("follow") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -837,7 +861,6 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
-    -- 7. Команда «стоп»
     elseif cleanMsg:find("хватит") or cleanMsg:find("stop") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
         if followingPlayer == senderPlayer then
             lastResponseTime = tick()
@@ -845,7 +868,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.stopOk)
         end
 
-    -- 8. Расскажи анекдот
     elseif cleanMsg:find("анекдот") or cleanMsg:find("joke") or cleanMsg:find("tell a joke") or cleanMsg:find("расскажи") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -872,7 +894,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ (С ПРОВЕРКОЙ СЕСТРЫ ДЛЯ ЛЕМОНЧИКА)
+-- ГЛАВНЫЙ ЦИКЛ ИИ
 -- ==========================================
 safeSpawn(function()
     print("[BOT]: Поток ИИ запущен!")
@@ -886,13 +908,15 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
-                -- 🍊 ЗАДЕЛ ПОД ВСТРЕЧУ С ЛЕМОНЧИКОМ (ПРОВЕРКА НИКА СЕСТРЫ denchik_gjfjc)
-                for _, p in ipairs(Players:GetPlayers()) do
-                    if p.Name == "denchik_gjfjc" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                        local sisterHrp = p.Character.HumanoidRootPart
-                        local distToSister = (sisterHrp.Position - hrp.Position).Magnitude
-                        if distToSister <= 15 then
-                            -- Здесь в будущем можно будет запустить диалог между ботами!
+                -- Проверка Лемончика36 (работает только при ВКЛ кнопке в настройках)
+                if lemonchikActive then
+                    for _, p in ipairs(Players:GetPlayers()) do
+                        if p.Name == "denchik_gjfjc" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                            local sisterHrp = p.Character.HumanoidRootPart
+                            local distToSister = (sisterHrp.Position - hrp.Position).Magnitude
+                            if distToSister <= 15 then
+                                -- Задел под скетч диалога двух ботов
+                            end
                         end
                     end
                 end
@@ -989,7 +1013,7 @@ safeSpawn(function()
                     end
                     safeWait(0.2)
 
-                -- 4. Автономный режим
+                -- 4. Автономный режим (Включая случайное сидение на земле)
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
@@ -1001,9 +1025,26 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        local actionChance = math.random(1, 10)
+                        local actionChance = math.random(1, 12)
 
-                        if actionChance <= 2 then
+                        -- Шанс 1 из 12 — Бот присаживается отдохнуть на земле (видят все)
+                        if actionChance == 1 then
+                            hum.Sit = true
+                            local sitDuration = math.random(5, 12)
+                            local sitStart = tick()
+
+                            while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
+                                safeWait(0.5)
+                            end
+
+                            if hum then
+                                hum.Sit = false
+                                safeWait(0.1)
+                                hum.Jump = true
+                            end
+                            safeWait(1)
+
+                        elseif actionChance <= 3 then
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1021,7 +1062,7 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        elseif actionChance == 3 then
+                        elseif actionChance == 4 then
                             local targetChar = getNearestPlayer(0, 35)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1039,11 +1080,11 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        elseif actionChance <= 6 then
+                        elseif actionChance <= 7 then
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                             safeWait(math.random(3, 7))
 
-                        elseif actionChance <= 9 then
+                        elseif actionChance <= 10 then
                             safeWait(math.random(4, 8))
 
                         else
@@ -1065,4 +1106,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Апельсинчик полностью готов и заряжен на ужасы!")
+print("[BOT]: Обновление успешно применено!")
