@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + SITTING ANIMATION + LEMONCHIK TOGGLE)
+-- LIVE SKIN BOT (FIXED SIT + 10% MONOLOGUE CHANCE)
 -- ==========================================
 
-print("[BOT]: Запуск обновленной версии бота...")
+print("[BOT]: Запуск обновленной версии бота (фикс сидения + шанс 10%)...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -34,7 +34,8 @@ end
 
 local botActive = false
 local returnToSpawnActive = true
-local lemonchikActive = true -- Переключатель для сестры (Лемончик36)
+local lemonchikActive = true
+local isSelfSitting = false -- Флаг для разблокировки сидения, когда бот отдыхает сам
 local currentLanguage = "RU" -- "RU" или "EN"
 local lastChatTime = tick()
 local lastResponseTime = 0
@@ -460,7 +461,6 @@ local SetSpawnStroke = Instance.new("UIStroke", SetSpawnBtn)
 SetSpawnStroke.Thickness = 1
 SetSpawnStroke.Color = Color3.fromRGB(170, 80, 200)
 
--- КНОПКА ВКЛ/ВЫКЛ ДИАЛОГА С ЛЕМОНЧИКОМ
 local LemonToggleBtn = Instance.new("TextButton", SubMenuFrame)
 LemonToggleBtn.Size = UDim2.new(1, -6, 0, 28)
 LemonToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 20)
@@ -645,6 +645,7 @@ ToggleButton.MouseButton1Click:Connect(function()
             followingPlayer = nil 
             waitingForQuestion = false
             questionUser = nil
+            isSelfSitting = false
         end
     end
 end)
@@ -694,12 +695,14 @@ end)
 
 UnloadBtn.MouseButton1Click:Connect(function() showUnloadConfirmation() end)
 
+-- ИСПРАВЛЕННЫЙ ANTI-SIT (НЕ МЕШАЕТ БОТУ СИДЕТЬ САМОМУ!)
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
 
     humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        if botActive and humanoid.Sit then
+        -- Если бот сам решил сесть (isSelfSitting = true), Anti-Sit ИГНОРИРУЕТ это!
+        if botActive and humanoid.Sit and not isSelfSitting then
             safeWait(0.05)
             humanoid.Sit = false
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
@@ -720,6 +723,7 @@ local function triggerCreepyMonologue(senderPlayer)
     followingPlayer = nil
     waitingForQuestion = false
     questionUser = nil
+    isSelfSitting = false
 
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -834,11 +838,12 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.evaluation[math.random(#dict.evaluation)])
         end
 
+    -- ШАНС ПАСХАЛКИ ПОДНЯТ ДО 10%! (1 из 10 срабатываний)
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
             
-            if math.random(1, 100) == 1 then
+            if math.random(1, 10) == 1 then
                 triggerCreepyMonologue(senderPlayer)
             else
                 sayMessage(dict.tips[math.random(#dict.tips)])
@@ -908,14 +913,13 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
-                -- Проверка Лемончика36 (работает только при ВКЛ кнопке в настройках)
                 if lemonchikActive then
                     for _, p in ipairs(Players:GetPlayers()) do
                         if p.Name == "denchik_gjfjc" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             local sisterHrp = p.Character.HumanoidRootPart
                             local distToSister = (sisterHrp.Position - hrp.Position).Magnitude
                             if distToSister <= 15 then
-                                -- Задел под скетч диалога двух ботов
+                                -- Задел под скетч
                             end
                         end
                     end
@@ -968,6 +972,7 @@ safeSpawn(function()
 
                 -- 1. Побег от тележки
                 if threatPos ~= nil then
+                    isSelfSitting = false
                     hum.WalkSpeed = 32
                     local escapeTarget = isFront and (hrp.Position - (hrp.CFrame.LookVector * 28)) or (hrp.Position + (hrp.CFrame.LookVector * 28))
                     hum:MoveTo(escapeTarget)
@@ -978,6 +983,7 @@ safeSpawn(function()
 
                 -- 2. Ожидание вопроса
                 elseif waitingForQuestion then
+                    isSelfSitting = false
                     if questionUser and questionUser.Character then
                         local tHrp = questionUser.Character:FindFirstChild("HumanoidRootPart")
                         if tHrp and hrp then
@@ -989,6 +995,7 @@ safeSpawn(function()
 
                 -- 3. Режим следования
                 elseif followingPlayer then
+                    isSelfSitting = false
                     local targetChar = followingPlayer.Character
                     local targetHrp = targetChar and targetChar:FindFirstChild("HumanoidRootPart")
                     local targetHum = targetChar and targetChar:FindFirstChildOfClass("Humanoid")
@@ -1013,24 +1020,27 @@ safeSpawn(function()
                     end
                     safeWait(0.2)
 
-                -- 4. Автономный режим (Включая случайное сидение на земле)
+                -- 4. Автономный режим
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
 
                     if shouldReturnSpawn then
+                        isSelfSitting = false
                         safeMoveTo(spawnPosition + Vector3.new(math.random(-6, 6), 0, math.random(-6, 6)))
                         if math.random(1, 2) == 1 then
                             sayMessage(dict.spawnReturn[math.random(#dict.spawnReturn)])
                         end
                         safeWait(math.random(3, 6))
                     else
-                        local actionChance = math.random(1, 12)
+                        local actionChance = math.random(1, 10)
 
-                        -- Шанс 1 из 12 — Бот присаживается отдохнуть на земле (видят все)
+                        -- Шанс 1 из 10 — Бот присаживается отдохнуть на землю
                         if actionChance == 1 then
+                            isSelfSitting = true -- Отключаем Anti-Sit
                             hum.Sit = true
-                            local sitDuration = math.random(5, 12)
+                            
+                            local sitDuration = math.random(5, 10)
                             local sitStart = tick()
 
                             while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
@@ -1042,9 +1052,11 @@ safeSpawn(function()
                                 safeWait(0.1)
                                 hum.Jump = true
                             end
+                            isSelfSitting = false -- Включаем Anti-Sit обратно
                             safeWait(1)
 
                         elseif actionChance <= 3 then
+                            isSelfSitting = false
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1063,6 +1075,7 @@ safeSpawn(function()
                             end
 
                         elseif actionChance == 4 then
+                            isSelfSitting = false
                             local targetChar = getNearestPlayer(0, 35)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1081,13 +1094,16 @@ safeSpawn(function()
                             end
 
                         elseif actionChance <= 7 then
+                            isSelfSitting = false
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                             safeWait(math.random(3, 7))
 
-                        elseif actionChance <= 10 then
+                        elseif actionChance <= 9 then
+                            isSelfSitting = false
                             safeWait(math.random(4, 8))
 
                         else
+                            isSelfSitting = false
                             useRandomItem()
                             safeWait(math.random(2, 4))
                         end
@@ -1106,4 +1122,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Обновление успешно применено!")
+print("[BOT]: Скрипт готов! Теперь бот нормально садится, а шанс монолога 10%!")
