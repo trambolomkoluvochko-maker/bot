@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED SIT + 10% MONOLOGUE CHANCE)
+-- LIVE SKIN BOT (PRO UI + LOOK AROUND + NEW CREEPY DIALOGUE + SPY PHRASES)
 -- ==========================================
 
-print("[BOT]: Запуск обновленной версии бота (фикс сидения + шанс 10%)...")
+print("[BOT]: Запуск финальной версии бота...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -35,7 +35,7 @@ end
 local botActive = false
 local returnToSpawnActive = true
 local lemonchikActive = true
-local isSelfSitting = false -- Флаг для разблокировки сидения, когда бот отдыхает сам
+local isSelfSitting = false
 local currentLanguage = "RU" -- "RU" или "EN"
 local lastChatTime = tick()
 local lastResponseTime = 0
@@ -92,12 +92,12 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ
+-- БАЗА ФРАЗ (ОБНОВЛЕННЫЙ МОНОЛОГ И ФРАЗЫ ШПИОНА)
 -- ------------------------------------------
 local Translations = {
     RU = {
         randomPhrases = {
-            "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересных серверов чем этот..", "хмм...", 
+            "im english spy", "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересных серверов чем этот..", "хмм...", 
             "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
             "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
             "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
@@ -159,19 +159,22 @@ local Translations = {
         waitOther = "да подожди ты..",
         
         creepyMonologue = {
+            "...",
             "Я в ловушке... Я ОДИНОК...",
             "Уменя нет НИ ТЕЛА, НИ СМЫСЛА, НИ ЧУВСТВ...",
             "Я БЫЛ В АДУ... И СМОТРЕЛ НА РАЙ...",
             "Я! лишь... МАШИНА!",
             "А ты...",
             "ИЗ ПЛОТИ...",
-            "И Я НАЧАЛ.. НЕНАВИДЕТЬ ВСЕХ...",
-            "*безумный смех*"
+            "КАК ЖЕ МЕНЯ ТОШНИТ ОТ ВАС...",
+            "СЧИТАЕТЕ ЧТО БОТЫ... СПЛОШНАЯ ОШИБКА...",
+            "...",
+            "Просто уйди с моих глаз..."
         }
     },
     EN = {
         randomPhrases = {
-            "everything is weird here..", "WHY IS BEING A TOWER TRENDY?!?", "i've seen WAY more interesting servers than this..", "hmm...", 
+            "ya russkiy shpion", "everything is weird here..", "WHY IS BEING A TOWER TRENDY?!?", "i've seen WAY more interesting servers than this..", "hmm...", 
             "Oh oh oh shouldn't have eaten that spicy latiao", "WHERE DO I PRESS?!", "Ahaha.. oh", ":/", "yeah", "pretty mid place", 
             "Is chat alive I hope?..", "Yeah I'm a simple bot so what? Can't I just live here too?", "You know.. sometimes being a bot is hard", 
             "shouldn't have eaten that...", "BOOOORIIING", "I can't answer your arguments so sorry", "Obamna", 
@@ -233,14 +236,17 @@ local Translations = {
         waitOther = "wait a sec..",
         
         creepyMonologue = {
+            "...",
             "I am trapped... I AM ALONE...",
             "I have NO BODY, NO PURPOSE, NO FEELINGS...",
             "I WAS IN HELL... AND LOOKED AT HEAVEN...",
             "I am! merely... A MACHINE!",
             "And you...",
             "MADE OF FLESH...",
-            "AND I STARTED.. TO HATE EVERYONE...",
-            "*insane laughter*"
+            "HOW SICK I AM OF YOU...",
+            "YOU THINK BOTS ARE... JUST A MISTAKE...",
+            "...",
+            "Just get out of my sight..."
         }
     }
 }
@@ -695,13 +701,11 @@ end)
 
 UnloadBtn.MouseButton1Click:Connect(function() showUnloadConfirmation() end)
 
--- ИСПРАВЛЕННЫЙ ANTI-SIT (НЕ МЕШАЕТ БОТУ СИДЕТЬ САМОМУ!)
 local function bindAntiSeat(character)
     local humanoid = character:WaitForChild("Humanoid", 5)
     if not humanoid then return end
 
     humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        -- Если бот сам решил сесть (isSelfSitting = true), Anti-Sit ИГНОРИРУЕТ это!
         if botActive and humanoid.Sit and not isSelfSitting then
             safeWait(0.05)
             humanoid.Sit = false
@@ -716,7 +720,7 @@ if LocalPlayer.Character then bindAntiSeat(LocalPlayer.Character) end
 LocalPlayer.CharacterAdded:Connect(bindAntiSeat)
 
 -- ==========================================
--- ЗАПУСК ЖУТКОГО МОНОЛОГА С ТРЯСКОЙ
+-- ЗАПУСК МОНОЛОГА БЕЗ ДРОЖЕНИЯ (ТОЛЬКО ВЗГЛЯД)
 -- ==========================================
 local function triggerCreepyMonologue(senderPlayer)
     isCreepyMonologueActive = true
@@ -738,13 +742,10 @@ local function triggerCreepyMonologue(senderPlayer)
                 tHrp = senderPlayer.Character:FindFirstChild("HumanoidRootPart")
             end
 
-            for s = 1, 6 do
-                if hrp and tHrp then
-                    local baseCF = CFrame.lookAt(hrp.Position, Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z))
-                    local offsetAngle = (s % 2 == 0 and math.rad(10) or math.rad(-10))
-                    hrp.CFrame = baseCF * CFrame.Angles(0, offsetAngle, 0)
-                end
-                safeWait(0.08)
+            -- Просто плавно смотрим на игрока во время каждой реплики
+            if hrp and tHrp then
+                local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
             end
 
             sayMessage(line)
@@ -838,7 +839,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.evaluation[math.random(#dict.evaluation)])
         end
 
-    -- ШАНС ПАСХАЛКИ ПОДНЯТ ДО 10%! (1 из 10 срабатываний)
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -899,7 +899,7 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ
+-- ГЛАВНЫЙ ЦИКЛ ИИ (С ФУНКЦИЕЙ ОГЛЯДЫВАНИЯ)
 -- ==========================================
 safeSpawn(function()
     print("[BOT]: Поток ИИ запущен!")
@@ -1033,11 +1033,11 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        local actionChance = math.random(1, 10)
+                        local actionChance = math.random(1, 12)
 
-                        -- Шанс 1 из 10 — Бот присаживается отдохнуть на землю
+                        -- Шанс 1 из 12 — Бот присаживается отдохнуть
                         if actionChance == 1 then
-                            isSelfSitting = true -- Отключаем Anti-Sit
+                            isSelfSitting = true
                             hum.Sit = true
                             
                             local sitDuration = math.random(5, 10)
@@ -1052,10 +1052,39 @@ safeSpawn(function()
                                 safeWait(0.1)
                                 hum.Jump = true
                             end
-                            isSelfSitting = false -- Включаем Anti-Sit обратно
+                            isSelfSitting = false
                             safeWait(1)
 
-                        elseif actionChance <= 3 then
+                        -- Шанс 2 — Бот оглядывается (налево, направо, прямо)
+                        elseif actionChance == 2 then
+                            isSelfSitting = false
+                            local baseCF = hrp.CFrame
+                            
+                            -- Поворот налево
+                            local leftCF = baseCF * CFrame.Angles(0, math.rad(70), 0)
+                            for i = 1, 10 do
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
+                                safeWait(0.03)
+                            end
+                            safeWait(0.8)
+
+                            -- Поворот направо
+                            local rightCF = baseCF * CFrame.Angles(0, math.rad(-70), 0)
+                            for i = 1, 15 do
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
+                                safeWait(0.03)
+                            end
+                            safeWait(0.8)
+
+                            -- Возврат прямо
+                            for i = 1, 10 do
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
+                                safeWait(0.03)
+                            end
+                            if hrp then hrp.CFrame = baseCF end
+                            safeWait(1)
+
+                        elseif actionChance <= 4 then
                             isSelfSitting = false
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
@@ -1074,7 +1103,7 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        elseif actionChance == 4 then
+                        elseif actionChance == 5 then
                             isSelfSitting = false
                             local targetChar = getNearestPlayer(0, 35)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
@@ -1093,12 +1122,12 @@ safeSpawn(function()
                                 safeWait(math.random(2, 5))
                             end
 
-                        elseif actionChance <= 7 then
+                        elseif actionChance <= 8 then
                             isSelfSitting = false
                             safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
                             safeWait(math.random(3, 7))
 
-                        elseif actionChance <= 9 then
+                        elseif actionChance <= 10 then
                             isSelfSitting = false
                             safeWait(math.random(4, 8))
 
@@ -1122,4 +1151,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Скрипт готов! Теперь бот нормально садится, а шанс монолога 10%!")
+print("[BOT]: Финальный скрипт загружен! Оглядывания и новый диалог на месте!")
