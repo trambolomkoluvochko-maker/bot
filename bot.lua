@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED GREETING + NEW PHRASES + LOOK AROUND)
+-- LIVE SKIN BOT (PRO UI + FIXED GREETING + UNBLURRED COMMAND TIP)
 -- ==========================================
 
-print("[BOT]: Запуск обновленной версии бота с фиксом приветствий...")
+print("[BOT]: Запуск бота с обновленной подсказкой...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -92,12 +92,12 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (С НОВЫМИ ФРАЗАМИ И ПРИВЕТСТВИЯМИ)
+-- БАЗА ФРАЗ (С НОВОЙ НЕЗАСЕРИТОЙ ПОДСКАЗКОЙ)
 -- ------------------------------------------
 local Translations = {
     RU = {
         randomPhrases = {
-            "Думаете я просто хожу туда сюда? Напишите в чат \"команды\" и узнаете про меня чуть получше",
+            "Хотите узнать больше инфы? Напишите в чат \"команды\"",
             "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
             "im english spy", "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересных серверов чем этот..", "хмм...", 
             "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
@@ -176,7 +176,7 @@ local Translations = {
     },
     EN = {
         randomPhrases = {
-            "You think I'm just walking around? Type \"commands\" in chat to know me better",
+            "Want to know more? Type \"commands\" in chat",
             "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
             "ya russkiy shpion", "everything is weird here..", "WHY IS BEING A TOWER TRENDY?!?", "i've seen WAY more interesting servers than this..", "hmm...", 
             "Oh oh oh shouldn't have eaten that spicy latiao", "WHERE DO I PRESS?!", "Ahaha.. oh", ":/", "yeah", "pretty mid place", 
@@ -759,7 +759,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ИСПРАВЛЕННЫЕ ПРИВЕТСТВИЯ ВБЛИЗИ)
+-- ОБРАБОТКА ЧАТА
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
@@ -820,13 +820,11 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
-    -- 1. Исправленные приветствия ВБЛИЗИ (<= 10 студов + поворот к игроку)
     if isGreeting(cleanMsg) and dist <= 10 then
         lastResponseTime = tick()
         hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
-    -- 2. Команда "Ответь на вопрос"
     elseif cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -838,7 +836,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage("?")
         end
 
-    -- 3. Команда "Оцени" / "Rate"
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -846,7 +843,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.evaluation[math.random(#dict.evaluation)])
         end
 
-    -- 4. Команда подсказок (Шанс 10% на монолог)
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -858,12 +854,10 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
-    -- 5. Вопросы «ты бот?»
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") or cleanMsg:find("you bot") or cleanMsg:find("are you a bot") then
         lastResponseTime = tick()
         sayMessage(dict.botIdentity[math.random(#dict.botIdentity)])
 
-    -- 6. Команда «следуй за мной»
     elseif cleanMsg:find("следуй") or cleanMsg:find("follow") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -876,7 +870,6 @@ local function processChatMessage(senderPlayer, msg)
             end
         end
 
-    -- 7. Команда «стоп»
     elseif cleanMsg:find("хватит") or cleanMsg:find("stop") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
         if followingPlayer == senderPlayer then
             lastResponseTime = tick()
@@ -884,7 +877,6 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.stopOk)
         end
 
-    -- 8. Расскажи анекдот
     elseif cleanMsg:find("анекдот") or cleanMsg:find("joke") or cleanMsg:find("tell a joke") or cleanMsg:find("расскажи") then
         if dist <= 60 then
             lastResponseTime = tick()
@@ -1160,4 +1152,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Все функции работают идеально!")
+print("[BOT]: Финальный скрипт с чистой фразой успешно загружен!")
