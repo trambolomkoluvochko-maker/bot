@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + DISTANCE FIX + LONELINESS MODE + BUNNY HOP)
+-- LIVE SKIN BOT (PRO UI + DISTANCE FIX + LONELINESS SLOW WALK + FIRST LAUNCH INTRO)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного Апельсинчика с исправленной дистанцией и Bunny-Hop...")
+print("[BOT]: Запуск Апельсинчика с медленной ходьбой в одиночестве и интро-фразой...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -35,7 +35,7 @@ end
 local botActive = false
 local returnToSpawnActive = true
 local lemonchikActive = true
-local bunnyHopActive = false -- Переключатель Bunny-Hop режима
+local hasIntroduced = false -- Флаг: приветствовал ли уже бот за эту сессию
 local isSelfSitting = false
 local currentLanguage = "RU"
 local lastChatTime = tick()
@@ -93,7 +93,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (С ОБНОВЛЕННОЙ НЕЗАСЕРЕНОЙ ПОДСКАЗКОЙ)
+-- БАЗА ФРАЗ
 -- ------------------------------------------
 local Translations = {
     RU = {
@@ -111,6 +111,10 @@ local Translations = {
             "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "в аптеках не продают время потомучто время не лечит",
             "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?..",
             "do you know what time it is?"
+        },
+        firstIntro = {
+            "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
+            "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!"
         },
         playerStare = {
             "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
@@ -189,6 +193,10 @@ local Translations = {
             "If you close your eyes it gets dark", "If you're sad.. don't be", "pharmacies don't sell time because time doesn't heal",
             "This crosshair is OP!", "Cheeki breeki..", "Oh well..", "I am NOT from that other game!", "Going for raspberries who's with me?.. nobody?..",
             "do you know what time it is?"
+        },
+        firstIntro = {
+            "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
+            "Want to know more? Type \"commands\" in chat to get random info!"
         },
         playerStare = {
             "You know.. sometimes finding that soulmate isn't easy", "Still changing your outfit huh?", "🤨", "AFK? I guess so..", 
@@ -319,7 +327,7 @@ local function getNearestPlayer(minDist, maxDist)
     local closestDist = maxDist or 50
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character.HumanoidRootPart then
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
             if dist >= (minDist or 0) and dist <= closestDist then
                 closestDist = dist
@@ -449,19 +457,6 @@ local SetSpawnStroke = Instance.new("UIStroke", SetSpawnBtn)
 SetSpawnStroke.Thickness = 1
 SetSpawnStroke.Color = Color3.fromRGB(170, 80, 200)
 
--- КНОПКА BUNNY-HOP РЕЖИМА
-local BhopToggleBtn = Instance.new("TextButton", SubMenuFrame)
-BhopToggleBtn.Size = UDim2.new(1, -6, 0, 28)
-BhopToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 45, 45)
-BhopToggleBtn.Text = "🦘 Bhop: ВЫКЛ"
-BhopToggleBtn.TextColor3 = Color3.fromRGB(150, 220, 255)
-BhopToggleBtn.TextSize = 10
-BhopToggleBtn.Font = Enum.Font.FredokaOne
-Instance.new("UICorner", BhopToggleBtn).CornerRadius = UDim.new(0, 6)
-local BhopStroke = Instance.new("UIStroke", BhopToggleBtn)
-BhopStroke.Thickness = 1
-BhopStroke.Color = Color3.fromRGB(60, 160, 180)
-
 local LemonToggleBtn = Instance.new("TextButton", SubMenuFrame)
 LemonToggleBtn.Size = UDim2.new(1, -6, 0, 28)
 LemonToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 20)
@@ -558,7 +553,7 @@ MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
         SubMenuFrame.Visible = true
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 160)}):Play()
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 130)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
     else
         local tween = TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)})
@@ -593,20 +588,6 @@ local function updateSpawnBtnState(enabled)
         SpawnToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
         TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(30, 32, 40)}):Play()
         TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(80, 80, 95)}):Play()
-    end
-end
-
-local function updateBhopBtnState(enabled)
-    if enabled then
-        BhopToggleBtn.Text = currentLanguage == "RU" and "🦘 Bhop: ВКЛ" or "🦘 Bhop: ON"
-        BhopToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 200)
-        TweenService:Create(BhopToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(20, 50, 45)}):Play()
-        TweenService:Create(BhopStroke, tweenInfo, {Color = Color3.fromRGB(50, 200, 150)}):Play()
-    else
-        BhopToggleBtn.Text = currentLanguage == "RU" and "🦘 Bhop: ВЫКЛ" or "🦘 Bhop: OFF"
-        BhopToggleBtn.TextColor3 = Color3.fromRGB(150, 220, 255)
-        TweenService:Create(BhopToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(25, 45, 45)}):Play()
-        TweenService:Create(BhopStroke, tweenInfo, {Color = Color3.fromRGB(60, 160, 180)}):Play()
     end
 end
 
@@ -652,11 +633,27 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
+-- ПРИ ВКЛЮЧЕНИИ БОТА (ПЕРВОЕ ВХОЖДЕНИЕ В СЕССИЮ)
 ToggleButton.MouseButton1Click:Connect(function()
     if not dragMoved then
         botActive = not botActive
         updateUIState(botActive)
-        if not botActive then 
+        
+        if botActive then
+            -- Если еще не приветствовал за эту сессию, говорим вступительные фразы
+            if not hasIntroduced then
+                hasIntroduced = true
+                safeSpawn(function()
+                    safeWait(1)
+                    local dict = Translations[currentLanguage]
+                    for _, introText in ipairs(dict.firstIntro) do
+                        if not botActive then break end
+                        sayMessage(introText)
+                        safeWait(3)
+                    end
+                end)
+            end
+        else 
             followingPlayer = nil 
             waitingForQuestion = false
             questionUser = nil
@@ -668,11 +665,6 @@ end)
 SpawnToggleBtn.MouseButton1Click:Connect(function()
     returnToSpawnActive = not returnToSpawnActive
     updateSpawnBtnState(returnToSpawnActive)
-end)
-
-BhopToggleBtn.MouseButton1Click:Connect(function()
-    bunnyHopActive = not bunnyHopActive
-    updateBhopBtnState(bunnyHopActive)
 end)
 
 LemonToggleBtn.MouseButton1Click:Connect(function()
@@ -710,7 +702,6 @@ LanguageBtn.MouseButton1Click:Connect(function()
         UnloadBtn.Text = "⛔ Удалить скрипт"
     end
     updateSpawnBtnState(returnToSpawnActive)
-    updateBhopBtnState(bunnyHopActive)
     updateLemonBtnState(lemonchikActive)
 end)
 
@@ -770,7 +761,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ФИКС ДИСТАНЦИИ ДЛЯ ВСЕХ КОМАНД)
+-- ОБРАБОТКА ЧАТА (ФИКС ДИСТАНЦИИ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
@@ -896,11 +887,10 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ (С BUNNY-HOP И РЕЖИМОМ ОДИНОЧЕСТВА)
+-- ГЛАВНЫЙ ЦИКЛ ИИ
 -- ==========================================
 safeSpawn(function()
     print("[BOT]: Поток ИИ запущен!")
-    local bhopSpeed = 16
     while true do
         safeWait(0.2)
 
@@ -910,21 +900,6 @@ safeSpawn(function()
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hum and hrp and hum.Health > 0 then
-
-                -- Логика Bunny-Hop (разгон скорости при прыжках)
-                if bunnyHopActive then
-                    if hum.FloorMaterial == Enum.Material.Air then
-                        bhopSpeed = math.clamp(bhopSpeed + 1.2, 16, 38)
-                    else
-                        if math.random(1, 3) == 1 then
-                            hum.Jump = true
-                        end
-                    end
-                    hum.WalkSpeed = bhopSpeed
-                else
-                    if hum.WalkSpeed > 20 then hum.WalkSpeed = 16 end
-                    bhopSpeed = 16
-                end
 
                 if lemonchikActive then
                     for _, p in ipairs(Players:GetPlayers()) do
@@ -939,6 +914,13 @@ safeSpawn(function()
 
                 local dict = Translations[currentLanguage]
                 local playersNearby = isAnyPlayerNearby(45)
+
+                -- Управление скоростью: в одиночестве ходит медленно (8), когда есть игроки — стандарт (16)
+                if not playersNearby and not followingPlayer then
+                    hum.WalkSpeed = 8
+                else
+                    hum.WalkSpeed = 16
+                end
 
                 -- 0. ДЕТЕКТОР ВЗГЛЯДА
                 local nearChar, nearPlayer = getNearestPlayer(0, 6)
@@ -1033,7 +1015,7 @@ safeSpawn(function()
                     end
                     safeWait(0.2)
 
-                -- 4. Автономный режим (С проверкой на одиночество)
+                -- 4. Автономный режим
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
@@ -1046,7 +1028,7 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        -- РЕЖИМ ОДИНОЧЕСТВА: Если рядом никого нет — бот молчит и часто оглядывается в поисках души
+                        -- РЕЖИМ ОДИНОЧЕСТВА: Молчит и медленно оглядывается
                         if not playersNearby then
                             isSelfSitting = false
                             local baseCF = hrp.CFrame
@@ -1163,7 +1145,7 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические случайные фразы (только если кто-то есть рядом!)
+                -- 5. Периодические случайные фразы (только если кто-то есть рядом)
                 if playersNearby and (tick() - lastChatTime >= chatCooldown) then
                     sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
                     lastChatTime = tick()
@@ -1175,4 +1157,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Финальный скрипт с Bunny-Hop и фиксом дистанции запущен!")
+print("[BOT]: Скрипт успешно обновлен!")
