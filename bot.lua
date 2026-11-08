@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO + CHAT LOCK)
+-- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO + RASPBERRY MINI-GAME + CHAT REACTIONS)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчина со всеми финальными фишками...")
+print("[BOT]: Запуск Апельсинчика с интерактивными ответами и малиной...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -43,6 +43,10 @@ local chatCooldown = math.random(12, 25)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 local Connections = {}
+
+-- Переменные мини-игры с малиной
+local raspberryEventActive = false
+local raspberryTimer = 0
 
 -- Переменные системы вопросов
 local questionUser = nil
@@ -111,6 +115,15 @@ local Translations = {
             tipInfo = "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
             finalOutro = "ну думаю все сказал нужное! А так можете меня встретить тут!"
         },
+        raspberryPhrase = "Я за малиной кто сомной?.. никто?..",
+        raspberryReaction = "это небыло вопросом...peace duke",
+        
+        chatReactions = {
+            "ПРИКИНЬ! Я КАК БУДТО СЛУШАЮ!!!",
+            "Ага ага мгм..",
+            "Не понимаю ваш альфачный язык"
+        },
+        
         randomPhrases = {
             "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
             "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
@@ -203,6 +216,15 @@ local Translations = {
             tipInfo = "Want to know more? Type \"commands\" in chat to get random info!",
             finalOutro = "well I think I said everything needed! So you can meet me right here!"
         },
+        raspberryPhrase = "Going for raspberries who's with me?.. nobody?..",
+        raspberryReaction = "it wasn't a question...peace duke",
+        
+        chatReactions = {
+            "SURPRISE! AS IF I'M ACTUALLY LISTENING!!!",
+            "Yeah yeah mhm..",
+            "Don't understand your alpha language"
+        },
+        
         randomPhrases = {
             "Want to know more? Type \"commands\" in chat to get random info!",
             "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
@@ -640,7 +662,7 @@ local function applyLanguageUI()
 end
 
 -- ==========================================
--- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С СОХРАНЕНИЕМ ВЗГЛЯДА)
+-- СПАВН-АНИМАЦИЯ (С СОХРАНЕНИЕМ ВЗГЛЯДА)
 -- ==========================================
 local function playSpawnCutscene()
     isCutsceneActive = true
@@ -649,11 +671,9 @@ local function playSpawnCutscene()
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
     if hrp and hum then
-        -- Запоминаем то направление, куда игрок смотрел ДО телепортации в небо
         local originalLookVector = hrp.CFrame.LookVector
         local groundPos = hrp.Position
         
-        -- Поднимаем в небо
         hrp.CFrame = CFrame.new(groundPos + Vector3.new(0, 75, 0))
         
         safeWait(0.3)
@@ -670,7 +690,6 @@ local function playSpawnCutscene()
         hum.Jump = true
         safeWait(0.6)
 
-        -- Возвращаем тот самый взгляд, куда смотрел игрок до катсцены
         local targetLandingPos = hrp.Position + Vector3.new(originalLookVector.X, 0, originalLookVector.Z) * 5
         hrp.CFrame = CFrame.lookAt(hrp.Position, targetLandingPos)
         safeWait(0.4)
@@ -681,28 +700,27 @@ local function playSpawnCutscene()
         sayMessage(dict.spawnGreetings[math.random(#dict.spawnGreetings)])
         safeWait(3.5)
 
-        -- 2. "ах да.. хочу вам сказать коечто"
+        -- 2. Переход
         sayMessage(dict.introSequence.transition)
         safeWait(2.5)
 
-        -- 3. Фраза про то, что он не человек (с паузой 5 секунд)
+        -- 3. Не человек
         sayMessage(dict.introSequence.notHuman)
         safeWait(5.0)
 
-        -- 4. "и еще.."
+        -- 4. И еще
         sayMessage(dict.introSequence.transition2)
         safeWait(2.0)
 
-        -- 5. Фраза про команды
+        -- 5. Команды
         sayMessage(dict.introSequence.tipInfo)
         safeWait(4.0)
 
-        -- 6. Финал катсцены (Таймер 3 сек -> фраза -> задержка 2 сек -> шаг назад)
+        -- 6. Финал катсцены (с исправленной буквой "е" в слове нужное)
         safeWait(3.0)
         sayMessage(dict.introSequence.finalOutro)
         safeWait(2.0)
 
-        -- Бот делает шаг назад/в сторону перед активацией
         hum:MoveTo(hrp.Position - (hrp.CFrame.LookVector * 6))
         safeWait(1.5)
     end
@@ -901,7 +919,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (С ЗАЩИТОЙ ОТ КОМАНД ВО ВРЕМЯ ИНТРО)
+-- ОБРАБОТКА ЧАТА (С ИНТЕРАКТИВНЫМИ РЕАКЦИЯМИ И МАЛИНОЙ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
@@ -925,6 +943,15 @@ local function processChatMessage(senderPlayer, msg)
     local dict = Translations[currentLanguage]
 
     if dist > 12 then return end
+
+    -- Проверка мини-игры с малиной (если игрок написал "я" или "me" во время таймера)
+    if raspberryEventActive and (cleanMsg == "я" or cleanMsg == "me") and (tick() - raspberryTimer <= 5) then
+        raspberryEventActive = false
+        lastResponseTime = tick()
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        sayMessage(dict.raspberryReaction)
+        return
+    end
 
     if waitingForQuestion then
         if senderPlayer == questionUser then
@@ -955,9 +982,17 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
+    -- Интерактивные триггеры ответов на фразы бота (если игрок написал "да", "я", "ты")
+    if cleanMsg:find("да") or cleanMsg:find("я") or cleanMsg:find("ты") or cleanMsg:find("yes") or cleanMsg:find("you") then
+        lastResponseTime = tick()
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        sayMessage(dict.chatReactions[math.random(#dict.chatReactions)])
+        return
+    end
+
     if isGreeting(cleanMsg) then
         lastResponseTime = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
     elseif cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
@@ -965,12 +1000,12 @@ local function processChatMessage(senderPlayer, msg)
         questionUser = senderPlayer
         waitingForQuestion = true
         questionTimeout = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
         sayMessage("?")
 
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
         lastResponseTime = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.evaluation[math.random(#dict.evaluation)])
 
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
@@ -1245,9 +1280,19 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические случайные фразы
+                -- 5. Периодические случайные фразы (с шансом запустить событие малины)
                 if tick() - lastChatTime >= chatCooldown then
-                    sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
+                    local chosenPhrase = ""
+                    -- С небольшой вероятностью выдаем фразу про малину и активируем таймер
+                    if math.random(1, 5) == 1 then
+                        chosenPhrase = dict.raspberryPhrase
+                        raspberryEventActive = true
+                        raspberryTimer = tick()
+                    else
+                        chosenPhrase = dict.randomPhrases[math.random(#dict.randomPhrases)]
+                    end
+
+                    sayMessage(chosenPhrase)
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
                 end
@@ -1260,4 +1305,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Финальный скрипт с идеальным интро и защитой чата запущен!")
+print("[BOT]: Финальный скрипт с пасхалкой про малину запущен!")
