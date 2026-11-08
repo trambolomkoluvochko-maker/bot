@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + FIXED GREETING + UNBLURRED COMMAND TIP)
+-- LIVE SKIN BOT (PRO UI + DISTANCE FIX + LONELINESS MODE + BUNNY HOP)
 -- ==========================================
 
-print("[BOT]: Запуск бота с обновленной подсказкой...")
+print("[BOT]: Запуск обновленного Апельсинчика с исправленной дистанцией и Bunny-Hop...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -35,8 +35,9 @@ end
 local botActive = false
 local returnToSpawnActive = true
 local lemonchikActive = true
+local bunnyHopActive = false -- Переключатель Bunny-Hop режима
 local isSelfSitting = false
-local currentLanguage = "RU" -- "RU" или "EN"
+local currentLanguage = "RU"
 local lastChatTime = tick()
 local lastResponseTime = 0
 local chatCooldown = math.random(12, 25)
@@ -92,19 +93,18 @@ LocalPlayer.CharacterAdded:Connect(function(char)
 end)
 
 -- ------------------------------------------
--- БАЗА ФРАЗ (С НОВОЙ НЕЗАСЕРИТОЙ ПОДСКАЗКОЙ)
+-- БАЗА ФРАЗ (С ОБНОВЛЕННОЙ НЕЗАСЕРЕНОЙ ПОДСКАЗКОЙ)
 -- ------------------------------------------
 local Translations = {
     RU = {
         randomPhrases = {
-            "Хотите узнать больше инфы? Напишите в чат \"команды\"",
+            "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
             "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
             "im english spy", "странно тут все..", "ПОЧЕМУ БЫТЬ БАШНЕЙ МОДНО?!?", "я видел ГОРАЗДО интересных серверов чем этот..", "хмм...", 
             "Ой ой ой ненадо было кушать острый китайский латяо", "КУДА ЖМАТЬ ТО?!", "Ахэахав.. ой", ":/", "ее", "так себе местечко", 
             "Чат живой надеюсь?..", "Да я простой бот и че? Как будто мне жить даже нельзя тут", "Знаете.. иногда быть ботом трудно", 
             "ненадо было это кушать...", "СКУЧНААА", "Я не могу отвечать на ваши аргументы так что извините", "Обэмэ", 
-            "Уменя черные точки вместо глаз..", "Хотите послушать анекдот? Напишите в чат \"расскажи анекдот\" и расскажу", 
-            ":0", "Ходилкин бродилкин", "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", 
+            "Уменя черные точки вместо глаз..", ":0", "Ходилкин бродилкин", "Рп действие занюхнул воздух", "Боты тоже как люди", "UwU", "Я.. я забыл куда идти", 
             "мир так желток..", "Забавный факт: это и есть забавный факт", "пацаны скиньте дз пж", "Жить хочу", 
             "Скучные тут все..", "Я не кому не ужин...", "Я во всем виноград", "😶", "🍞",
             "Скучно.. скучно.. идешь такой бродишь куда глаза глядят..", "Почему все думают боты в роблоксе злые? Все не так же плохо..",
@@ -176,14 +176,13 @@ local Translations = {
     },
     EN = {
         randomPhrases = {
-            "Want to know more? Type \"commands\" in chat",
+            "Want to know more? Type \"commands\" in chat to get random info!",
             "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
             "ya russkiy shpion", "everything is weird here..", "WHY IS BEING A TOWER TRENDY?!?", "i've seen WAY more interesting servers than this..", "hmm...", 
             "Oh oh oh shouldn't have eaten that spicy latiao", "WHERE DO I PRESS?!", "Ahaha.. oh", ":/", "yeah", "pretty mid place", 
             "Is chat alive I hope?..", "Yeah I'm a simple bot so what? Can't I just live here too?", "You know.. sometimes being a bot is hard", 
             "shouldn't have eaten that...", "BOOOORIIING", "I can't answer your arguments so sorry", "Obamna", 
-            "I have black dots instead of eyes..", "Want to hear a joke? Type \"joke\" or \"commands\" in chat", 
-            ":0", "Walking around doing nothing", "RP action sniffed the air", "Bots are people too", "UwU", "I.. I forgot where to go", 
+            "I have black dots instead of eyes..", ":0", "Walking around doing nothing", "RP action sniffed the air", "Bots are people too", "UwU", "I.. I forgot where to go", 
             "world is so cold..", "Fun fact: this is a fun fact", "guys send homework pls", "I wanna live", 
             "Everyone is so boring here..", "I'm nobody's dinner...", "😶", "🍞",
             "Boring.. boring.. just walking wherever my eyes go..", "Why does everyone think bots in roblox are evil? It's not that bad..",
@@ -320,7 +319,7 @@ local function getNearestPlayer(minDist, maxDist)
     local closestDist = maxDist or 50
 
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        if player ~= LocalPlayer and player.Character and player.Character.HumanoidRootPart then
             local dist = (player.Character.HumanoidRootPart.Position - myPos).Magnitude
             if dist >= (minDist or 0) and dist <= closestDist then
                 closestDist = dist
@@ -332,39 +331,18 @@ local function getNearestPlayer(minDist, maxDist)
     return nearestChar, nearestPlayer
 end
 
-local function useRandomItem()
-    local backpack = LocalPlayer:FindFirstChild("Backpack")
+local function isAnyPlayerNearby(maxDist)
     local char = LocalPlayer.Character
-    if not char then return end
-
-    local tools = {}
-    if backpack then
-        for _, item in ipairs(backpack:GetChildren()) do
-            if item:IsA("Tool") then table.insert(tools, item) end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
+    local myPos = char.HumanoidRootPart.Position
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            if (player.Character.HumanoidRootPart.Position - myPos).Magnitude <= (maxDist or 45) then
+                return true
+            end
         end
     end
-
-    if #tools > 0 then
-        local randomTool = tools[math.random(#tools)]
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:EquipTool(randomTool)
-            safeWait(0.4)
-            randomTool:Activate()
-            safeWait(0.8)
-            hum:UnequipTools()
-        end
-    end
-end
-
-local function safeMoveTo(targetPos)
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-
-    if math.random(1, 5) == 1 then hum.Jump = true end
-    hum:MoveTo(targetPos)
+    return false
 end
 
 -- ==========================================
@@ -471,6 +449,19 @@ local SetSpawnStroke = Instance.new("UIStroke", SetSpawnBtn)
 SetSpawnStroke.Thickness = 1
 SetSpawnStroke.Color = Color3.fromRGB(170, 80, 200)
 
+-- КНОПКА BUNNY-HOP РЕЖИМА
+local BhopToggleBtn = Instance.new("TextButton", SubMenuFrame)
+BhopToggleBtn.Size = UDim2.new(1, -6, 0, 28)
+BhopToggleBtn.BackgroundColor3 = Color3.fromRGB(25, 45, 45)
+BhopToggleBtn.Text = "🦘 Bhop: ВЫКЛ"
+BhopToggleBtn.TextColor3 = Color3.fromRGB(150, 220, 255)
+BhopToggleBtn.TextSize = 10
+BhopToggleBtn.Font = Enum.Font.FredokaOne
+Instance.new("UICorner", BhopToggleBtn).CornerRadius = UDim.new(0, 6)
+local BhopStroke = Instance.new("UIStroke", BhopToggleBtn)
+BhopStroke.Thickness = 1
+BhopStroke.Color = Color3.fromRGB(60, 160, 180)
+
 local LemonToggleBtn = Instance.new("TextButton", SubMenuFrame)
 LemonToggleBtn.Size = UDim2.new(1, -6, 0, 28)
 LemonToggleBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 20)
@@ -567,7 +558,7 @@ MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
         SubMenuFrame.Visible = true
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 130)}):Play()
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 160)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
     else
         local tween = TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)})
@@ -602,6 +593,20 @@ local function updateSpawnBtnState(enabled)
         SpawnToggleBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
         TweenService:Create(SpawnToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(30, 32, 40)}):Play()
         TweenService:Create(SpawnStroke, tweenInfo, {Color = Color3.fromRGB(80, 80, 95)}):Play()
+    end
+end
+
+local function updateBhopBtnState(enabled)
+    if enabled then
+        BhopToggleBtn.Text = currentLanguage == "RU" and "🦘 Bhop: ВКЛ" or "🦘 Bhop: ON"
+        BhopToggleBtn.TextColor3 = Color3.fromRGB(100, 255, 200)
+        TweenService:Create(BhopToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(20, 50, 45)}):Play()
+        TweenService:Create(BhopStroke, tweenInfo, {Color = Color3.fromRGB(50, 200, 150)}):Play()
+    else
+        BhopToggleBtn.Text = currentLanguage == "RU" and "🦘 Bhop: ВЫКЛ" or "🦘 Bhop: OFF"
+        BhopToggleBtn.TextColor3 = Color3.fromRGB(150, 220, 255)
+        TweenService:Create(BhopToggleBtn, tweenInfo, {BackgroundColor3 = Color3.fromRGB(25, 45, 45)}):Play()
+        TweenService:Create(BhopStroke, tweenInfo, {Color = Color3.fromRGB(60, 160, 180)}):Play()
     end
 end
 
@@ -665,6 +670,11 @@ SpawnToggleBtn.MouseButton1Click:Connect(function()
     updateSpawnBtnState(returnToSpawnActive)
 end)
 
+BhopToggleBtn.MouseButton1Click:Connect(function()
+    bunnyHopActive = not bunnyHopActive
+    updateBhopBtnState(bunnyHopActive)
+end)
+
 LemonToggleBtn.MouseButton1Click:Connect(function()
     lemonchikActive = not lemonchikActive
     updateLemonBtnState(lemonchikActive)
@@ -700,6 +710,7 @@ LanguageBtn.MouseButton1Click:Connect(function()
         UnloadBtn.Text = "⛔ Удалить скрипт"
     end
     updateSpawnBtnState(returnToSpawnActive)
+    updateBhopBtnState(bunnyHopActive)
     updateLemonBtnState(lemonchikActive)
 end)
 
@@ -759,7 +770,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА
+-- ОБРАБОТКА ЧАТА (ФИКС ДИСТАНЦИИ ДЛЯ ВСЕХ КОМАНД)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
@@ -782,76 +793,62 @@ local function processChatMessage(senderPlayer, msg)
     local dist = (senderHrp.Position - hrp.Position).Magnitude
     local dict = Translations[currentLanguage]
 
+    -- ЖЕСТКИЙ ФИКС: Все команды срабатывают ТОЛЬКО вблизи (<= 12 студов)
+    if dist > 12 then return end
+
     if waitingForQuestion then
         if senderPlayer == questionUser then
-            if dist <= 60 then
-                lastResponseTime = tick()
-                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-                
-                local isYes = (math.random(1, 2) == 1)
-                if isYes then
-                    if hum then hum.Jump = true end
-                else
-                    safeSpawn(function()
-                        local tPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
-                        local baseCF = CFrame.lookAt(hrp.Position, tPos)
-                        for i = 1, 3 do
-                            if hrp then hrp.CFrame = baseCF * CFrame.Angles(0, math.rad(30), 0) end
-                            safeWait(0.1)
-                            if hrp then hrp.CFrame = baseCF * CFrame.Angles(0, math.rad(-30), 0) end
-                            safeWait(0.1)
-                        end
-                        if hrp then hrp.CFrame = baseCF end
-                    end)
-                end
+            lastResponseTime = tick()
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            
+            local isYes = (math.random(1, 2) == 1)
+            if isYes then
+                if hum then hum.Jump = true end
+            else
+                safeSpawn(function()
+                    local tPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
+                    local baseCF = CFrame.lookAt(hrp.Position, tPos)
+                    for i = 1, 3 do
+                        if hrp then hrp.CFrame = baseCF * CFrame.Angles(0, math.rad(30), 0) end
+                        safeWait(0.1)
+                        if hrp then hrp.CFrame = baseCF * CFrame.Angles(0, math.rad(-30), 0) end
+                        safeWait(0.1)
+                    end
+                    if hrp then hrp.CFrame = baseCF end
+                end)
             end
             waitingForQuestion = false
             questionUser = nil
             return
-        else
-            if cleanMsg:find("ответь") or cleanMsg:find("вопрос") or cleanMsg:find("ask") or cleanMsg:find("question") then
-                if dist <= 60 then
-                    sayMessage(dict.waitOther)
-                end
-                return
-            end
         end
     end
 
     if tick() - lastResponseTime < 2 then return end
 
-    if isGreeting(cleanMsg) and dist <= 10 then
+    if isGreeting(cleanMsg) then
         lastResponseTime = tick()
         hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
     elseif cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
-        if dist <= 60 then
-            lastResponseTime = tick()
-            questionUser = senderPlayer
-            waitingForQuestion = true
-            questionTimeout = tick()
-
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-            sayMessage("?")
-        end
+        lastResponseTime = tick()
+        questionUser = senderPlayer
+        waitingForQuestion = true
+        questionTimeout = tick()
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        sayMessage("?")
 
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
-        if dist <= 60 then
-            lastResponseTime = tick()
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-            sayMessage(dict.evaluation[math.random(#dict.evaluation)])
-        end
+        lastResponseTime = tick()
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        sayMessage(dict.evaluation[math.random(#dict.evaluation)])
 
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
-        if dist <= 60 then
-            lastResponseTime = tick()
-            
-            if math.random(1, 10) == 1 then
-                triggerCreepyMonologue(senderPlayer)
-            else
-                sayMessage(dict.tips[math.random(#dict.tips)])
-            end
+        lastResponseTime = tick()
+        if math.random(1, 10) == 1 then
+            triggerCreepyMonologue(senderPlayer)
+        else
+            sayMessage(dict.tips[math.random(#dict.tips)])
         end
 
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") or cleanMsg:find("you bot") or cleanMsg:find("are you a bot") then
@@ -859,15 +856,13 @@ local function processChatMessage(senderPlayer, msg)
         sayMessage(dict.botIdentity[math.random(#dict.botIdentity)])
 
     elseif cleanMsg:find("следуй") or cleanMsg:find("follow") or cleanMsg:find("идем за мной") or cleanMsg:find("иди за мной") or cleanMsg:find("за мной") then
-        if dist <= 60 then
-            lastResponseTime = tick()
-            if followingPlayer and followingPlayer ~= senderPlayer then
-                sayMessage(dict.alreadyFollowing)
-            else
-                followingPlayer = senderPlayer
-                hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
-                sayMessage(dict.followOk)
-            end
+        lastResponseTime = tick()
+        if followingPlayer and followingPlayer ~= senderPlayer then
+            sayMessage(dict.alreadyFollowing)
+        else
+            followingPlayer = senderPlayer
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            sayMessage(dict.followOk)
         end
 
     elseif cleanMsg:find("хватит") or cleanMsg:find("stop") or cleanMsg:find("стоп") or cleanMsg:find("не иди") then
@@ -878,10 +873,8 @@ local function processChatMessage(senderPlayer, msg)
         end
 
     elseif cleanMsg:find("анекдот") or cleanMsg:find("joke") or cleanMsg:find("tell a joke") or cleanMsg:find("расскажи") then
-        if dist <= 60 then
-            lastResponseTime = tick()
-            sayMessage(dict.jokes[math.random(#dict.jokes)])
-        end
+        lastResponseTime = tick()
+        sayMessage(dict.jokes[math.random(#dict.jokes)])
     end
 end
 
@@ -903,10 +896,11 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ
+-- ГЛАВНЫЙ ЦИКЛ ИИ (С BUNNY-HOP И РЕЖИМОМ ОДИНОЧЕСТВА)
 -- ==========================================
 safeSpawn(function()
     print("[BOT]: Поток ИИ запущен!")
+    local bhopSpeed = 16
     while true do
         safeWait(0.2)
 
@@ -917,21 +911,36 @@ safeSpawn(function()
 
             if hum and hrp and hum.Health > 0 then
 
+                -- Логика Bunny-Hop (разгон скорости при прыжках)
+                if bunnyHopActive then
+                    if hum.FloorMaterial == Enum.Material.Air then
+                        bhopSpeed = math.clamp(bhopSpeed + 1.2, 16, 38)
+                    else
+                        if math.random(1, 3) == 1 then
+                            hum.Jump = true
+                        end
+                    end
+                    hum.WalkSpeed = bhopSpeed
+                else
+                    if hum.WalkSpeed > 20 then hum.WalkSpeed = 16 end
+                    bhopSpeed = 16
+                end
+
                 if lemonchikActive then
                     for _, p in ipairs(Players:GetPlayers()) do
                         if p.Name == "denchik_gjfjc" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                             local sisterHrp = p.Character.HumanoidRootPart
-                            local distToSister = (sisterHrp.Position - hrp.Position).Magnitude
-                            if distToSister <= 15 then
-                                -- Задел под скетч
+                            if (sisterHrp.Position - hrp.Position).Magnitude <= 15 then
+                                -- Скетч для Лемончика в будущем
                             end
                         end
                     end
                 end
 
                 local dict = Translations[currentLanguage]
+                local playersNearby = isAnyPlayerNearby(45)
 
-                -- 0. ДЕТЕКТОР ВЗГЛЯДА (<= 6 студов + 8 секунд)
+                -- 0. ДЕТЕКТОР ВЗГЛЯДА
                 local nearChar, nearPlayer = getNearestPlayer(0, 6)
                 if nearChar and nearChar:FindFirstChild("HumanoidRootPart") then
                     local tHrp = nearChar.HumanoidRootPart
@@ -1024,7 +1033,7 @@ safeSpawn(function()
                     end
                     safeWait(0.2)
 
-                -- 4. Автономный режим
+                -- 4. Автономный режим (С проверкой на одиночество)
                 else
                     local distFromSpawn = (hrp.Position - spawnPosition).Magnitude
                     local shouldReturnSpawn = returnToSpawnActive and (distFromSpawn > 120 or (math.random(1, 20) == 20 and distFromSpawn > 50))
@@ -1037,111 +1046,125 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        local actionChance = math.random(1, 12)
-
-                        -- Шанс 1 — Присесть
-                        if actionChance == 1 then
-                            isSelfSitting = true
-                            hum.Sit = true
-                            
-                            local sitDuration = math.random(5, 10)
-                            local sitStart = tick()
-
-                            while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
-                                safeWait(0.5)
-                            end
-
-                            if hum then
-                                hum.Sit = false
-                                safeWait(0.1)
-                                hum.Jump = true
-                            end
-                            isSelfSitting = false
-                            safeWait(1)
-
-                        -- Шанс 2 — Оглянуться
-                        elseif actionChance == 2 then
+                        -- РЕЖИМ ОДИНОЧЕСТВА: Если рядом никого нет — бот молчит и часто оглядывается в поисках души
+                        if not playersNearby then
                             isSelfSitting = false
                             local baseCF = hrp.CFrame
+                            local randomAngle = math.rad(math.random(-110, 110))
+                            local lookCF = baseCF * CFrame.Angles(0, randomAngle, 0)
                             
-                            local leftCF = baseCF * CFrame.Angles(0, math.rad(70), 0)
                             for i = 1, 10 do
-                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(lookCF, 0.3) end
                                 safeWait(0.03)
                             end
-                            safeWait(0.8)
-
-                            local rightCF = baseCF * CFrame.Angles(0, math.rad(-70), 0)
-                            for i = 1, 15 do
-                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
-                                safeWait(0.03)
-                            end
-                            safeWait(0.8)
-
-                            for i = 1, 10 do
-                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
-                                safeWait(0.03)
-                            end
-                            if hrp then hrp.CFrame = baseCF end
-                            safeWait(1)
-
-                        elseif actionChance <= 4 then
-                            isSelfSitting = false
-                            local targetChar = getNearestPlayer(12, 55)
-                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
-                                local tHrp = targetChar.HumanoidRootPart
-                                local observeStart = tick()
-
-                                while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer and not waitingForQuestion do
-                                    if tHrp and hrp then
-                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                        hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
-                                    end
-                                    safeWait(0.05)
-                                end
-                            else
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(2, 5))
-                            end
-
-                        elseif actionChance == 5 then
-                            isSelfSitting = false
-                            local targetChar = getNearestPlayer(0, 35)
-                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                local tHrp = targetChar.HumanoidRootPart
-                                safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                                safeWait(1.5)
-
-                                if hrp and tHrp then
-                                    local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
-                                    sayMessage(dict.playerStare[math.random(#dict.playerStare)])
-                                end
-                                safeWait(math.random(3, 6))
-                            else
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(2, 5))
-                            end
-
-                        elseif actionChance <= 8 then
-                            isSelfSitting = false
-                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                            safeWait(math.random(3, 7))
-
-                        elseif actionChance <= 10 then
-                            isSelfSitting = false
-                            safeWait(math.random(4, 8))
-
+                            safeWait(1.5)
                         else
-                            isSelfSitting = false
-                            useRandomItem()
-                            safeWait(math.random(2, 4))
+                            local actionChance = math.random(1, 12)
+
+                            -- Шанс 1 — Присесть
+                            if actionChance == 1 then
+                                isSelfSitting = true
+                                hum.Sit = true
+                                
+                                local sitDuration = math.random(5, 10)
+                                local sitStart = tick()
+
+                                while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
+                                    safeWait(0.5)
+                                end
+
+                                if hum then
+                                    hum.Sit = false
+                                    safeWait(0.1)
+                                    hum.Jump = true
+                                end
+                                isSelfSitting = false
+                                safeWait(1)
+
+                            -- Шанс 2 — Оглянуться
+                            elseif actionChance == 2 then
+                                isSelfSitting = false
+                                local baseCF = hrp.CFrame
+                                
+                                local leftCF = baseCF * CFrame.Angles(0, math.rad(70), 0)
+                                for i = 1, 10 do
+                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
+                                    safeWait(0.03)
+                                end
+                                safeWait(0.8)
+
+                                local rightCF = baseCF * CFrame.Angles(0, math.rad(-70), 0)
+                                for i = 1, 15 do
+                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
+                                    safeWait(0.03)
+                                end
+                                safeWait(0.8)
+
+                                for i = 1, 10 do
+                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
+                                    safeWait(0.03)
+                                end
+                                if hrp then hrp.CFrame = baseCF end
+                                safeWait(1)
+
+                            elseif actionChance <= 4 then
+                                isSelfSitting = false
+                                local targetChar = getNearestPlayer(12, 55)
+                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
+                                    local tHrp = targetChar.HumanoidRootPart
+                                    local observeStart = tick()
+
+                                    while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer and not waitingForQuestion do
+                                        if tHrp and hrp then
+                                            local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
+                                        end
+                                        safeWait(0.05)
+                                    end
+                                else
+                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                    safeWait(math.random(2, 5))
+                                end
+
+                            elseif actionChance == 5 then
+                                isSelfSitting = false
+                                local targetChar = getNearestPlayer(0, 35)
+                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                    local tHrp = targetChar.HumanoidRootPart
+                                    safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                    safeWait(1.5)
+
+                                    if hrp and tHrp then
+                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                        hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
+                                        sayMessage(dict.playerStare[math.random(#dict.playerStare)])
+                                    end
+                                    safeWait(math.random(3, 6))
+                                else
+                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                    safeWait(math.random(2, 5))
+                                end
+
+                            elseif actionChance <= 8 then
+                                isSelfSitting = false
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(3, 7))
+
+                            elseif actionChance <= 10 then
+                                isSelfSitting = false
+                                safeWait(math.random(4, 8))
+
+                            else
+                                isSelfSitting = false
+                                useRandomItem()
+                                safeWait(math.random(2, 4))
+                            end
                         end
                     end
                 end
 
-                -- 5. Периодические случайные фразы
-                if tick() - lastChatTime >= chatCooldown then
+                -- 5. Периодические случайные фразы (только если кто-то есть рядом!)
+                if playersNearby and (tick() - lastChatTime >= chatCooldown) then
                     sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
@@ -1152,4 +1175,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Финальный скрипт с чистой фразой успешно загружен!")
+print("[BOT]: Финальный скрипт с Bunny-Hop и фиксом дистанции запущен!")
