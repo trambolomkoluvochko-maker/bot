@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (FIXED LONELINESS 100 STUDS & 3+ PLAYERS CHECK)
+-- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN CUTSCENE)
 -- ==========================================
 
-print("[BOT]: Запуск обновленного Апельсинчика с исправленной логикой одиночества...")
+print("[BOT]: Запуск Апельсинчика с выбором языка и спавн-катсценой...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -35,7 +35,6 @@ end
 local botActive = false
 local returnToSpawnActive = true
 local lemonchikActive = true
-local hasIntroduced = false
 local isSelfSitting = false
 local currentLanguage = "RU"
 local lastChatTime = tick()
@@ -50,8 +49,9 @@ local questionUser = nil
 local waitingForQuestion = false
 local questionTimeout = 0
 
--- Блокировка во время монолога
+-- Блокировка во время монолога или катсцены
 local isCreepyMonologueActive = false
+local isCutsceneActive = false
 
 -- Детектор взгляда
 local staringPlayer = nil
@@ -97,6 +97,13 @@ end)
 -- ------------------------------------------
 local Translations = {
     RU = {
+        spawnGreetings = {
+            "Новый сервер новые странности!",
+            "Мне тут сказали что тут шкафы есть.. и где?",
+            "Как я вообще не переломал себе ноги??",
+            "Опа, мягкая посадка! Ну почти...",
+            "Фух, вроде живой. Всем здарова!"
+        },
         randomPhrases = {
             "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
             "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
@@ -111,10 +118,6 @@ local Translations = {
             "Если закрыть глаза то станет темно", "Если грустишь.. не грусти", "в аптеках не продают время потомучто время не лечит",
             "Этот прицел просто имба!", "Cheeki breeki..", "Да уж..", "я НЕ из плейса \"внизу канава 2\"!", "Я за малиной кто сомной?.. никто?..",
             "do you know what time it is?"
-        },
-        firstIntro = {
-            "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
-            "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!"
         },
         playerStare = {
             "Знаешь.. иногда найти ту самую половинку не просто", "Все еще меняем скинчик м?", "🤨", "Афк? Думаю да..", 
@@ -179,6 +182,13 @@ local Translations = {
         }
     },
     EN = {
+        spawnGreetings = {
+            "New server, new weirdness!",
+            "They told me there are closets here.. where are they?",
+            "How did I not break my legs just now??",
+            "Whoa, soft landing! Well, almost...",
+            "Phew, still alive. Sup everyone!"
+        },
         randomPhrases = {
             "Want to know more? Type \"commands\" in chat to get random info!",
             "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
@@ -193,10 +203,6 @@ local Translations = {
             "If you close your eyes it gets dark", "If you're sad.. don't be", "pharmacies don't sell time because time doesn't heal",
             "This crosshair is OP!", "Cheeki breeki..", "Oh well..", "I am NOT from that other game!", "Going for raspberries who's with me?.. nobody?..",
             "do you know what time it is?"
-        },
-        firstIntro = {
-            "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
-            "Want to know more? Type \"commands\" in chat to get random info!"
         },
         playerStare = {
             "You know.. sometimes finding that soulmate isn't easy", "Still changing your outfit huh?", "🤨", "AFK? I guess so..", 
@@ -339,20 +345,14 @@ local function getNearestPlayer(minDist, maxDist)
     return nearestChar, nearestPlayer
 end
 
--- Считаем количество игроков в радиусе (по умолчанию 100 студов)
-local function countPlayersNearby(maxDist)
+local function safeMoveTo(targetPos)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return 0 end
-    local myPos = char.HumanoidRootPart.Position
-    local count = 0
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if (player.Character.HumanoidRootPart.Position - myPos).Magnitude <= (maxDist or 100) then
-                count = count + 1
-            end
-        end
-    end
-    return count
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    if math.random(1, 6) == 1 then hum.Jump = true end
+    hum:MoveTo(targetPos)
 end
 
 -- ==========================================
@@ -607,6 +607,150 @@ local function updateLemonBtnState(enabled)
     end
 end
 
+local function applyLanguageUI()
+    if currentLanguage == "EN" then
+        LanguageBtn.Text = "🌐 Language: EN"
+        LanguageBtn.TextColor3 = Color3.fromRGB(120, 200, 255)
+        LanguageStroke.Color = Color3.fromRGB(80, 160, 220)
+        SetSpawnBtn.Text = "📍 Set Spawn Point"
+        UnloadBtn.Text = "⛔ Delete Script"
+    else
+        LanguageBtn.Text = "🌐 Язык: RU"
+        LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
+        LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
+        SetSpawnBtn.Text = "📍 Задать спавн"
+        UnloadBtn.Text = "⛔ Удалить скрипт"
+    end
+    updateSpawnBtnState(returnToSpawnActive)
+    updateLemonBtnState(lemonchikActive)
+end
+
+-- ==========================================
+-- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С НЕБА)
+-- ==========================================
+local function playSpawnCutscene()
+    isCutsceneActive = true
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+    if hrp and hum then
+        local groundPos = hrp.Position
+        -- Поднимаем высоко в небо над тем местом, где стоял игрок
+        hrp.CFrame = CFrame.new(groundPos + Vector3.new(0, 75, 0))
+        
+        -- Ждем приземления
+        safeWait(0.3)
+        local fallStart = tick()
+        while hum.FloorMaterial == Enum.Material.Air and (tick() - fallStart < 4) do
+            safeWait(0.1)
+        end
+
+        -- Эффект приземления (присел на секунду и встал)
+        isSelfSitting = true
+        hum.Sit = true
+        safeWait(0.7)
+        hum.Sit = false
+        isSelfSitting = false
+        hum.Jump = true
+        safeWait(0.6)
+
+        -- Оглядывается по сторонам
+        local baseCF = hrp.CFrame
+        local leftCF = baseCF * CFrame.Angles(0, math.rad(65), 0)
+        for i = 1, 8 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
+            safeWait(0.03)
+        end
+        safeWait(0.4)
+
+        local rightCF = baseCF * CFrame.Angles(0, math.rad(-65), 0)
+        for i = 1, 12 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
+            safeWait(0.03)
+        end
+        safeWait(0.4)
+
+        for i = 1, 8 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
+            safeWait(0.03)
+        end
+        if hrp then hrp.CFrame = baseCF end
+
+        -- Говорит случайное приветствие
+        local dict = Translations[currentLanguage]
+        sayMessage(dict.spawnGreetings[math.random(#dict.spawnGreetings)])
+    end
+
+    isCutsceneActive = false
+    botActive = true
+    updateUIState(true)
+end
+
+-- ==========================================
+-- ОКНО ВЫБОРА ЯЗЫКА ПРИ ЗАПУСКЕ
+-- ==========================================
+local function showLanguagePopup()
+    local overlay = Instance.new("Frame", ScreenGui)
+    overlay.Name = "LangSelectOverlay"
+    overlay.Size = UDim2.new(1, 0, 1, 0)
+    overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    overlay.BackgroundTransparency = 0.45
+    overlay.ZIndex = 2000
+
+    local box = Instance.new("Frame", overlay)
+    box.Size = UDim2.new(0, 270, 0, 140)
+    box.Position = UDim2.new(0.5, -135, 0.5, -70)
+    box.BackgroundColor3 = Color3.fromRGB(24, 26, 34)
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 12)
+    local boxStroke = Instance.new("UIStroke", box)
+    boxStroke.Thickness = 2
+    boxStroke.Color = Color3.fromRGB(80, 150, 255)
+
+    local title = Instance.new("TextLabel", box)
+    title.Size = UDim2.new(1, -20, 0, 45)
+    title.Position = UDim2.new(0, 10, 0, 10)
+    title.Text = "Выберите язык / Select Language"
+    title.TextColor3 = Color3.fromRGB(240, 240, 255)
+    title.Font = Enum.Font.FredokaOne
+    title.TextSize = 14
+    title.BackgroundTransparency = 1
+
+    local ruBtn = Instance.new("TextButton", box)
+    ruBtn.Size = UDim2.new(0.42, 0, 0, 40)
+    ruBtn.Position = UDim2.new(0.06, 0, 0.55, 0)
+    ruBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 150)
+    ruBtn.Text = "🇷🇺 Русский"
+    ruBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ruBtn.Font = Enum.Font.FredokaOne
+    ruBtn.TextSize = 13
+    Instance.new("UICorner", ruBtn).CornerRadius = UDim.new(0, 8)
+
+    local enBtn = Instance.new("TextButton", box)
+    enBtn.Size = UDim2.new(0.42, 0, 0, 40)
+    enBtn.Position = UDim2.new(0.52, 0, 0.55, 0)
+    enBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 90)
+    enBtn.Text = "🇺🇸 English"
+    enBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    enBtn.Font = Enum.Font.FredokaOne
+    enBtn.TextSize = 13
+    Instance.new("UICorner", enBtn).CornerRadius = UDim.new(0, 8)
+
+    ruBtn.MouseButton1Click:Connect(function()
+        currentLanguage = "RU"
+        applyLanguageUI()
+        overlay:Destroy()
+        safeSpawn(playSpawnCutscene)
+    end)
+
+    enBtn.MouseButton1Click:Connect(function()
+        currentLanguage = "EN"
+        applyLanguageUI()
+        overlay:Destroy()
+        safeSpawn(playSpawnCutscene)
+    end)
+end
+
 local dragging = false
 local dragMoved = false
 local dragStart, startPos, menuStartPos, subMenuStartPos
@@ -635,26 +779,11 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
--- ПРИ ВКЛЮЧЕНИИ БОТА (ИНТРО)
 ToggleButton.MouseButton1Click:Connect(function()
-    if not dragMoved then
+    if not dragMoved and not isCutsceneActive then
         botActive = not botActive
         updateUIState(botActive)
-        
-        if botActive then
-            if not hasIntroduced then
-                hasIntroduced = true
-                safeSpawn(function()
-                    safeWait(1)
-                    local dict = Translations[currentLanguage]
-                    for _, introText in ipairs(dict.firstIntro) do
-                        if not botActive then break end
-                        sayMessage(introText)
-                        safeWait(3.5)
-                    end
-                end)
-            end
-        else 
+        if not botActive then 
             followingPlayer = nil 
             waitingForQuestion = false
             questionUser = nil
@@ -687,23 +816,8 @@ SetSpawnBtn.MouseButton1Click:Connect(function()
 end)
 
 LanguageBtn.MouseButton1Click:Connect(function()
-    if currentLanguage == "RU" then
-        currentLanguage = "EN"
-        LanguageBtn.Text = "🌐 Language: EN"
-        LanguageBtn.TextColor3 = Color3.fromRGB(120, 200, 255)
-        LanguageStroke.Color = Color3.fromRGB(80, 160, 220)
-        SetSpawnBtn.Text = "📍 Set Spawn Point"
-        UnloadBtn.Text = "⛔ Delete Script"
-    else
-        currentLanguage = "RU"
-        LanguageBtn.Text = "🌐 Язык: RU"
-        LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
-        LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
-        SetSpawnBtn.Text = "📍 Задать спавн"
-        UnloadBtn.Text = "⛔ Удалить скрипт"
-    end
-    updateSpawnBtnState(returnToSpawnActive)
-    updateLemonBtnState(lemonchikActive)
+    currentLanguage = (currentLanguage == "RU") and "EN" or "RU"
+    applyLanguageUI()
 end)
 
 UnloadBtn.MouseButton1Click:Connect(function() showUnloadConfirmation() end)
@@ -713,7 +827,7 @@ local function bindAntiSeat(character)
     if not humanoid then return end
 
     humanoid:GetPropertyChangedSignal("Sit"):Connect(function()
-        if botActive and humanoid.Sit and not isSelfSitting then
+        if botActive and not isCutsceneActive and humanoid.Sit and not isSelfSitting then
             safeWait(0.05)
             humanoid.Sit = false
             humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
@@ -762,10 +876,10 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ФИКС ДИСТАНЦИИ)
+-- ОБРАБОТКА ЧАТА (ДИСТАНЦИЯ <= 12 СТУДОВ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
-    if not botActive or isCreepyMonologueActive or senderPlayer == LocalPlayer then return end
+    if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
     
     if waitingForQuestion and tick() - questionTimeout > 15 then
         waitingForQuestion = false
@@ -785,7 +899,6 @@ local function processChatMessage(senderPlayer, msg)
     local dist = (senderHrp.Position - hrp.Position).Magnitude
     local dict = Translations[currentLanguage]
 
-    -- ЖЕСТКИЙ ФИКС: Все команды срабатывают ТОЛЬКО вблизи (<= 12 студов)
     if dist > 12 then return end
 
     if waitingForQuestion then
@@ -895,39 +1008,13 @@ safeSpawn(function()
     while true do
         safeWait(0.2)
 
-        if botActive and not isCreepyMonologueActive then
+        if botActive and not isCreepyMonologueActive and not isCutsceneActive then
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildOfClass("Humanoid")
             local hrp = char and char:FindFirstChild("HumanoidRootPart")
 
             if hum and hrp and hum.Health > 0 then
-
-                if lemonchikActive then
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p.Name == "denchik_gjfjc" and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                            local sisterHrp = p.Character.HumanoidRootPart
-                            if (sisterHrp.Position - hrp.Position).Magnitude <= 15 then
-                                -- Скетч для Лемончика в будущем
-                            end
-                        end
-                    end
-                end
-
                 local dict = Translations[currentLanguage]
-                
-                -- Условие одиночества: меньше 1 игроков в радиусе 100 студов (т.е. вообще никого)
-                local playersCount100 = countPlayersNearby(100)
-                local isAlone = (playersCount100 == 0)
-
-                -- Условие оживленной толпы: 3 или более игроков рядом
-                local hasCrowd = (countPlayersNearby(45) >= 3)
-
-                -- Скорость: если бот совсем один в радиусе 100 студов — ходит медленно (8), иначе обычно (16)
-                if isAlone and not followingPlayer then
-                    hum.WalkSpeed = 8
-                else
-                    hum.WalkSpeed = 16
-                end
 
                 -- 0. ДЕТЕКТОР ВЗГЛЯДА
                 local nearChar, nearPlayer = getNearestPlayer(0, 6)
@@ -1035,125 +1122,106 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        -- РЕЖИМ ОДИНОЧЕСТВА (Срабатывает только если в радиусе 100 студов НИКОГО нет и нет толпы из 3+ человек)
-                        if isAlone and not hasCrowd then
+                        local actionChance = math.random(1, 12)
+
+                        -- Шанс 1 — Присесть
+                        if actionChance == 1 then
+                            isSelfSitting = true
+                            hum.Sit = true
+                            
+                            local sitDuration = math.random(5, 10)
+                            local sitStart = tick()
+
+                            while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
+                                safeWait(0.5)
+                            end
+
+                            if hum then
+                                hum.Sit = false
+                                safeWait(0.1)
+                                hum.Jump = true
+                            end
+                            isSelfSitting = false
+                            safeWait(1)
+
+                        -- Шанс 2 — Оглянуться
+                        elseif actionChance == 2 then
                             isSelfSitting = false
                             local baseCF = hrp.CFrame
-                            local randomAngle = math.rad(math.random(-110, 110))
-                            local lookCF = baseCF * CFrame.Angles(0, randomAngle, 0)
                             
+                            local leftCF = baseCF * CFrame.Angles(0, math.rad(70), 0)
                             for i = 1, 10 do
-                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(lookCF, 0.3) end
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
                                 safeWait(0.03)
                             end
-                            safeWait(1.5)
-                        else
-                            local actionChance = math.random(1, 12)
+                            safeWait(0.8)
 
-                            -- Шанс 1 — Присесть
-                            if actionChance == 1 then
-                                isSelfSitting = true
-                                hum.Sit = true
-                                
-                                local sitDuration = math.random(5, 10)
-                                local sitStart = tick()
-
-                                while tick() - sitStart < sitDuration and botActive and not followingPlayer and not waitingForQuestion do
-                                    safeWait(0.5)
-                                end
-
-                                if hum then
-                                    hum.Sit = false
-                                    safeWait(0.1)
-                                    hum.Jump = true
-                                end
-                                isSelfSitting = false
-                                safeWait(1)
-
-                            -- Шанс 2 — Оглянуться
-                            elseif actionChance == 2 then
-                                isSelfSitting = false
-                                local baseCF = hrp.CFrame
-                                
-                                local leftCF = baseCF * CFrame.Angles(0, math.rad(70), 0)
-                                for i = 1, 10 do
-                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
-                                    safeWait(0.03)
-                                end
-                                safeWait(0.8)
-
-                                local rightCF = baseCF * CFrame.Angles(0, math.rad(-70), 0)
-                                for i = 1, 15 do
-                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
-                                    safeWait(0.03)
-                                end
-                                safeWait(0.8)
-
-                                for i = 1, 10 do
-                                    if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
-                                    safeWait(0.03)
-                                end
-                                if hrp then hrp.CFrame = baseCF end
-                                safeWait(1)
-
-                            elseif actionChance <= 4 then
-                                isSelfSitting = false
-                                local targetChar = getNearestPlayer(12, 55)
-                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
-                                    local tHrp = targetChar.HumanoidRootPart
-                                    local observeStart = tick()
-
-                                    while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer and not waitingForQuestion do
-                                        if tHrp and hrp then
-                                            local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                            hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
-                                        end
-                                        safeWait(0.05)
-                                    end
-                                else
-                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                    safeWait(math.random(2, 5))
-                                end
-
-                            elseif actionChance == 5 then
-                                isSelfSitting = false
-                                local targetChar = getNearestPlayer(0, 35)
-                                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                                    local tHrp = targetChar.HumanoidRootPart
-                                    safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
-                                    safeWait(1.5)
-
-                                    if hrp and tHrp then
-                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
-                                        hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
-                                        sayMessage(dict.playerStare[math.random(#dict.playerStare)])
-                                    end
-                                    safeWait(math.random(3, 6))
-                                else
-                                    safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                    safeWait(math.random(2, 5))
-                                end
-
-                            elseif actionChance <= 8 then
-                                isSelfSitting = false
-                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(3, 7))
-
-                            elseif actionChance <= 10 then
-                                isSelfSitting = false
-                                safeWait(math.random(4, 8))
-
-                            else
-                                isSelfSitting = false
-                                useRandomItem()
-                                safeWait(math.random(2, 4))
+                            local rightCF = baseCF * CFrame.Angles(0, math.rad(-70), 0)
+                            for i = 1, 15 do
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
+                                safeWait(0.03)
                             end
+                            safeWait(0.8)
+
+                            for i = 1, 10 do
+                                if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
+                                safeWait(0.03)
+                            end
+                            if hrp then hrp.CFrame = baseCF end
+                            safeWait(1)
+
+                        elseif actionChance <= 4 then
+                            isSelfSitting = false
+                            local targetChar = getNearestPlayer(12, 55)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
+                                local tHrp = targetChar.HumanoidRootPart
+                                local observeStart = tick()
+
+                                while tick() - observeStart < 8 and botActive and not followingPlayer and not staringPlayer and not waitingForQuestion do
+                                    if tHrp and hrp then
+                                        local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                        hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.15)
+                                    end
+                                    safeWait(0.05)
+                                end
+                            else
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(2, 5))
+                            end
+
+                        elseif actionChance == 5 then
+                            isSelfSitting = false
+                            local targetChar = getNearestPlayer(0, 35)
+                            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+                                local tHrp = targetChar.HumanoidRootPart
+                                safeMoveTo(tHrp.Position + Vector3.new(math.random(-4, 4), 0, math.random(-4, 4)))
+                                safeWait(1.5)
+
+                                if hrp and tHrp then
+                                    local targetLookPos = Vector3.new(tHrp.Position.X, hrp.Position.Y, tHrp.Position.Z)
+                                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetLookPos)
+                                    sayMessage(dict.playerStare[math.random(#dict.playerStare)])
+                                end
+                                safeWait(math.random(3, 6))
+                            else
+                                safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                                safeWait(math.random(2, 5))
+                            end
+
+                        elseif actionChance <= 8 then
+                            isSelfSitting = false
+                            safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
+                            safeWait(math.random(3, 7))
+
+                        else
+                            isSelfSitting = false
+                            safeWait(math.random(3, 6))
                         end
                     end
                 end
 
-                -- 5. Периодические случайные фразы (не спамит, если вокруг куча народу или если он один на 100 студов)
-                if not isAlone and (tick() - lastChatTime >= chatCooldown) then
+                -- 5. Периодические случайные фразы
+                if tick() - lastChatTime >= chatCooldown then
                     sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
@@ -1164,4 +1232,7 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Фикс одиночества (100 студов) успешно применен!")
+-- Показываем окно выбора языка при старте
+showLanguagePopup()
+
+print("[BOT]: Ожидание выбора языка для запуска спавн-катсцены!")
