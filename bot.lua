@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO MONOLOGUE)
+-- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO + CHAT LOCK)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с эпичным стартовым монологом...")
+print("[BOT]: Запуск Апельсинчина со всеми финальными фишками...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -108,7 +108,8 @@ local Translations = {
             transition = "ах да.. хочу вам сказать коечто",
             notHuman = "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
             transition2 = "и еще..",
-            tipInfo = "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!"
+            tipInfo = "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
+            finalOutro = "ну думаю все сказал нужное! А так можете меня встретить тут!"
         },
         randomPhrases = {
             "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
@@ -199,7 +200,8 @@ local Translations = {
             transition = "oh yeah.. I wanted to tell you something",
             notHuman = "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
             transition2 = "and also..",
-            tipInfo = "Want to know more? Type \"commands\" in chat to get random info!"
+            tipInfo = "Want to know more? Type \"commands\" in chat to get random info!",
+            finalOutro = "well I think I said everything needed! So you can meet me right here!"
         },
         randomPhrases = {
             "Want to know more? Type \"commands\" in chat to get random info!",
@@ -638,7 +640,7 @@ local function applyLanguageUI()
 end
 
 -- ==========================================
--- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С НЕБА + МОНОЛОГ)
+-- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С СОХРАНЕНИЕМ ВЗГЛЯДА)
 -- ==========================================
 local function playSpawnCutscene()
     isCutsceneActive = true
@@ -647,7 +649,11 @@ local function playSpawnCutscene()
     local hum = char and char:FindFirstChildOfClass("Humanoid")
 
     if hrp and hum then
+        -- Запоминаем то направление, куда игрок смотрел ДО телепортации в небо
+        local originalLookVector = hrp.CFrame.LookVector
         local groundPos = hrp.Position
+        
+        -- Поднимаем в небо
         hrp.CFrame = CFrame.new(groundPos + Vector3.new(0, 75, 0))
         
         safeWait(0.3)
@@ -664,27 +670,10 @@ local function playSpawnCutscene()
         hum.Jump = true
         safeWait(0.6)
 
-        -- Оглядывается
-        local baseCF = hrp.CFrame
-        local leftCF = baseCF * CFrame.Angles(0, math.rad(65), 0)
-        for i = 1, 8 do
-            if hrp then hrp.CFrame = hrp.CFrame:Lerp(leftCF, 0.3) end
-            safeWait(0.03)
-        end
+        -- Возвращаем тот самый взгляд, куда смотрел игрок до катсцены
+        local targetLandingPos = hrp.Position + Vector3.new(originalLookVector.X, 0, originalLookVector.Z) * 5
+        hrp.CFrame = CFrame.lookAt(hrp.Position, targetLandingPos)
         safeWait(0.4)
-
-        local rightCF = baseCF * CFrame.Angles(0, math.rad(-65), 0)
-        for i = 1, 12 do
-            if hrp then hrp.CFrame = hrp.CFrame:Lerp(rightCF, 0.3) end
-            safeWait(0.03)
-        end
-        safeWait(0.4)
-
-        for i = 1, 8 do
-            if hrp then hrp.CFrame = hrp.CFrame:Lerp(baseCF, 0.3) end
-            safeWait(0.03)
-        end
-        if hrp then hrp.CFrame = baseCF end
 
         local dict = Translations[currentLanguage]
 
@@ -706,6 +695,16 @@ local function playSpawnCutscene()
 
         -- 5. Фраза про команды
         sayMessage(dict.introSequence.tipInfo)
+        safeWait(4.0)
+
+        -- 6. Финал катсцены (Таймер 3 сек -> фраза -> задержка 2 сек -> шаг назад)
+        safeWait(3.0)
+        sayMessage(dict.introSequence.finalOutro)
+        safeWait(2.0)
+
+        -- Бот делает шаг назад/в сторону перед активацией
+        hum:MoveTo(hrp.Position - (hrp.CFrame.LookVector * 6))
+        safeWait(1.5)
     end
 
     isCutsceneActive = false
@@ -902,7 +901,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ДИСТАНЦИЯ <= 12 СТУДОВ)
+-- ОБРАБОТКА ЧАТА (С ЗАЩИТОЙ ОТ КОМАНД ВО ВРЕМЯ ИНТРО)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
@@ -930,7 +929,7 @@ local function processChatMessage(senderPlayer, msg)
     if waitingForQuestion then
         if senderPlayer == questionUser then
             lastResponseTime = tick()
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
             
             local isYes = (math.random(1, 2) == 1)
             if isYes then
@@ -992,7 +991,7 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.alreadyFollowing)
         else
             followingPlayer = senderPlayer
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
             sayMessage(dict.followOk)
         end
 
@@ -1261,4 +1260,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Скрипт готов! Ожидание выбора языка...")
+print("[BOT]: Финальный скрипт с идеальным интро и защитой чата запущен!")
