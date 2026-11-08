@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (PRO UI + DISTANCE FIX + LONELINESS SLOW WALK + FIRST LAUNCH INTRO)
+-- LIVE SKIN BOT (FIXED LONELINESS 100 STUDS & 3+ PLAYERS CHECK)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с медленной ходьбой в одиночестве и интро-фразой...")
+print("[BOT]: Запуск обновленного Апельсинчика с исправленной логикой одиночества...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -35,7 +35,7 @@ end
 local botActive = false
 local returnToSpawnActive = true
 local lemonchikActive = true
-local hasIntroduced = false -- Флаг: приветствовал ли уже бот за эту сессию
+local hasIntroduced = false
 local isSelfSitting = false
 local currentLanguage = "RU"
 local lastChatTime = tick()
@@ -339,18 +339,20 @@ local function getNearestPlayer(minDist, maxDist)
     return nearestChar, nearestPlayer
 end
 
-local function isAnyPlayerNearby(maxDist)
+-- Считаем количество игроков в радиусе (по умолчанию 100 студов)
+local function countPlayersNearby(maxDist)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return false end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return 0 end
     local myPos = char.HumanoidRootPart.Position
+    local count = 0
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            if (player.Character.HumanoidRootPart.Position - myPos).Magnitude <= (maxDist or 45) then
-                return true
+            if (player.Character.HumanoidRootPart.Position - myPos).Magnitude <= (maxDist or 100) then
+                count = count + 1
             end
         end
     end
-    return false
+    return count
 end
 
 -- ==========================================
@@ -633,14 +635,13 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
--- ПРИ ВКЛЮЧЕНИИ БОТА (ПЕРВОЕ ВХОЖДЕНИЕ В СЕССИЮ)
+-- ПРИ ВКЛЮЧЕНИИ БОТА (ИНТРО)
 ToggleButton.MouseButton1Click:Connect(function()
     if not dragMoved then
         botActive = not botActive
         updateUIState(botActive)
         
         if botActive then
-            -- Если еще не приветствовал за эту сессию, говорим вступительные фразы
             if not hasIntroduced then
                 hasIntroduced = true
                 safeSpawn(function()
@@ -649,7 +650,7 @@ ToggleButton.MouseButton1Click:Connect(function()
                     for _, introText in ipairs(dict.firstIntro) do
                         if not botActive then break end
                         sayMessage(introText)
-                        safeWait(3)
+                        safeWait(3.5)
                     end
                 end)
             end
@@ -913,10 +914,16 @@ safeSpawn(function()
                 end
 
                 local dict = Translations[currentLanguage]
-                local playersNearby = isAnyPlayerNearby(45)
+                
+                -- Условие одиночества: меньше 1 игроков в радиусе 100 студов (т.е. вообще никого)
+                local playersCount100 = countPlayersNearby(100)
+                local isAlone = (playersCount100 == 0)
 
-                -- Управление скоростью: в одиночестве ходит медленно (8), когда есть игроки — стандарт (16)
-                if not playersNearby and not followingPlayer then
+                -- Условие оживленной толпы: 3 или более игроков рядом
+                local hasCrowd = (countPlayersNearby(45) >= 3)
+
+                -- Скорость: если бот совсем один в радиусе 100 студов — ходит медленно (8), иначе обычно (16)
+                if isAlone and not followingPlayer then
                     hum.WalkSpeed = 8
                 else
                     hum.WalkSpeed = 16
@@ -1028,8 +1035,8 @@ safeSpawn(function()
                         end
                         safeWait(math.random(3, 6))
                     else
-                        -- РЕЖИМ ОДИНОЧЕСТВА: Молчит и медленно оглядывается
-                        if not playersNearby then
+                        -- РЕЖИМ ОДИНОЧЕСТВА (Срабатывает только если в радиусе 100 студов НИКОГО нет и нет толпы из 3+ человек)
+                        if isAlone and not hasCrowd then
                             isSelfSitting = false
                             local baseCF = hrp.CFrame
                             local randomAngle = math.rad(math.random(-110, 110))
@@ -1145,8 +1152,8 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические случайные фразы (только если кто-то есть рядом)
-                if playersNearby and (tick() - lastChatTime >= chatCooldown) then
+                -- 5. Периодические случайные фразы (не спамит, если вокруг куча народу или если он один на 100 студов)
+                if not isAlone and (tick() - lastChatTime >= chatCooldown) then
                     sayMessage(dict.randomPhrases[math.random(#dict.randomPhrases)])
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
@@ -1157,4 +1164,4 @@ safeSpawn(function()
     end
 end)
 
-print("[BOT]: Скрипт успешно обновлен!")
+print("[BOT]: Фикс одиночества (100 студов) успешно применен!")
