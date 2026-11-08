@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN CUTSCENE)
+-- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO MONOLOGUE)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с выбором языка и спавн-катсценой...")
+print("[BOT]: Запуск Апельсинчика с эпичным стартовым монологом...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -104,6 +104,12 @@ local Translations = {
             "Опа, мягкая посадка! Ну почти...",
             "Фух, вроде живой. Всем здарова!"
         },
+        introSequence = {
+            transition = "ах да.. хочу вам сказать коечто",
+            notHuman = "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
+            transition2 = "и еще..",
+            tipInfo = "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!"
+        },
         randomPhrases = {
             "хотите узнать больше инфы? Напишите в чат \"команды\" чтобы узнать рандом инфу!",
             "я НЕ игрок! Если не слышно звуков шагов значит я бот а не человек!!!",
@@ -188,6 +194,12 @@ local Translations = {
             "How did I not break my legs just now??",
             "Whoa, soft landing! Well, almost...",
             "Phew, still alive. Sup everyone!"
+        },
+        introSequence = {
+            transition = "oh yeah.. I wanted to tell you something",
+            notHuman = "I am NOT a player! If you don't hear footsteps it means I'm a bot not a human!!!",
+            transition2 = "and also..",
+            tipInfo = "Want to know more? Type \"commands\" in chat to get random info!"
         },
         randomPhrases = {
             "Want to know more? Type \"commands\" in chat to get random info!",
@@ -626,7 +638,7 @@ local function applyLanguageUI()
 end
 
 -- ==========================================
--- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С НЕБА)
+-- СПАВН-АНИМАЦИЯ (ПАДЕНИЕ С НЕБА + МОНОЛОГ)
 -- ==========================================
 local function playSpawnCutscene()
     isCutsceneActive = true
@@ -636,17 +648,14 @@ local function playSpawnCutscene()
 
     if hrp and hum then
         local groundPos = hrp.Position
-        -- Поднимаем высоко в небо над тем местом, где стоял игрок
         hrp.CFrame = CFrame.new(groundPos + Vector3.new(0, 75, 0))
         
-        -- Ждем приземления
         safeWait(0.3)
         local fallStart = tick()
         while hum.FloorMaterial == Enum.Material.Air and (tick() - fallStart < 4) do
             safeWait(0.1)
         end
 
-        -- Эффект приземления (присел на секунду и встал)
         isSelfSitting = true
         hum.Sit = true
         safeWait(0.7)
@@ -655,7 +664,7 @@ local function playSpawnCutscene()
         hum.Jump = true
         safeWait(0.6)
 
-        -- Оглядывается по сторонам
+        -- Оглядывается
         local baseCF = hrp.CFrame
         local leftCF = baseCF * CFrame.Angles(0, math.rad(65), 0)
         for i = 1, 8 do
@@ -677,9 +686,26 @@ local function playSpawnCutscene()
         end
         if hrp then hrp.CFrame = baseCF end
 
-        -- Говорит случайное приветствие
         local dict = Translations[currentLanguage]
+
+        -- 1. Приветствие
         sayMessage(dict.spawnGreetings[math.random(#dict.spawnGreetings)])
+        safeWait(3.5)
+
+        -- 2. "ах да.. хочу вам сказать коечто"
+        sayMessage(dict.introSequence.transition)
+        safeWait(2.5)
+
+        -- 3. Фраза про то, что он не человек (с паузой 5 секунд)
+        sayMessage(dict.introSequence.notHuman)
+        safeWait(5.0)
+
+        -- 4. "и еще.."
+        sayMessage(dict.introSequence.transition2)
+        safeWait(2.0)
+
+        -- 5. Фраза про команды
+        sayMessage(dict.introSequence.tipInfo)
     end
 
     isCutsceneActive = false
@@ -904,7 +930,7 @@ local function processChatMessage(senderPlayer, msg)
     if waitingForQuestion then
         if senderPlayer == questionUser then
             lastResponseTime = tick()
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
             
             local isYes = (math.random(1, 2) == 1)
             if isYes then
@@ -932,7 +958,7 @@ local function processChatMessage(senderPlayer, msg)
 
     if isGreeting(cleanMsg) then
         lastResponseTime = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.greetings[math.random(#dict.greetings)])
 
     elseif cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
@@ -940,12 +966,12 @@ local function processChatMessage(senderPlayer, msg)
         questionUser = senderPlayer
         waitingForQuestion = true
         questionTimeout = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
         sayMessage("?")
 
     elseif cleanMsg:find("оцени") or cleanMsg:find("rate") then
         lastResponseTime = tick()
-        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+        hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
         sayMessage(dict.evaluation[math.random(#dict.evaluation)])
 
     elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
@@ -966,7 +992,7 @@ local function processChatMessage(senderPlayer, msg)
             sayMessage(dict.alreadyFollowing)
         else
             followingPlayer = senderPlayer
-            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
+            hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, senderHrp.Position.Y, senderHrp.Position.Z))
             sayMessage(dict.followOk)
         end
 
@@ -1235,4 +1261,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Ожидание выбора языка для запуска спавн-катсцены!")
+print("[BOT]: Скрипт готов! Ожидание выбора языка...")
