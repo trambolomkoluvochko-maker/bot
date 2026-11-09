@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE POPUP + SKY SPAWN + EPIC INTRO + RASPBERRY MINI-GAME + CHAT REACTIONS)
+-- LIVE SKIN BOT (LANGUAGE + SKY SPAWN + EPIC INTRO + RASPBERRY + DETECTIVE PANEL)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с интерактивными ответами и малиной...")
+print("[BOT]: Запуск Апельсинчика с детективным меню и предсказанием фраз...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -43,6 +43,12 @@ local chatCooldown = math.random(12, 25)
 local followingPlayer = nil
 local spawnPosition = Vector3.new(0, 5, 0)
 local Connections = {}
+
+-- Переменные для детектив-панели (Инспектора)
+local nextPhraseQueue = nil
+local nextChatTimer = 15
+local nextSitTimer = 10
+local nextStareTimer = 12
 
 -- Переменные мини-игры с малиной
 local raspberryEventActive = false
@@ -121,7 +127,11 @@ local Translations = {
         chatReactions = {
             "ПРИКИНЬ! Я КАК БУДТО СЛУШАЮ!!!",
             "Ага ага мгм..",
-            "Не понимаю ваш альфачный язык"
+            "Не понимаю ваш альфачный язык",
+            "Ой да ладно тебе умник нашелся..",
+            "А ДА НУУУУ НАФИГ?",
+            "ну бл я же РУСС ЯЗЫКОМ сказал что не могу отвечать на ваши аргументы >:[",
+            "нет"
         },
         
         randomPhrases = {
@@ -222,7 +232,10 @@ local Translations = {
         chatReactions = {
             "SURPRISE! AS IF I'M ACTUALLY LISTENING!!!",
             "Yeah yeah mhm..",
-            "Don't understand your alpha language"
+            "Don't understand your alpha language",
+            "Oh yeah sure mister genius",
+            "What did you say? Say it again",
+            "Argument accepted, but I don't care 🗿"
         },
         
         randomPhrases = {
@@ -392,7 +405,7 @@ local function safeMoveTo(targetPos)
 end
 
 -- ==========================================
--- 🖱 UI ИНТЕРФЕЙС БОТА
+-- 🖱 UI ИНТЕРФЕЙС БОТА И ДЕТЕКТИВ-МЕНЮ
 -- ==========================================
 local parentGui = getGuiParent()
 
@@ -519,6 +532,19 @@ local LanguageStroke = Instance.new("UIStroke", LanguageBtn)
 LanguageStroke.Thickness = 1
 LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
 
+-- КНОПКА ОТКРЫТИЯ ДЕТЕКТИВНОГО МЕНЮ (ИНСПЕКТОРА)
+local DetectiveMenuBtn = Instance.new("TextButton", SubMenuFrame)
+DetectiveMenuBtn.Size = UDim2.new(1, -6, 0, 28)
+DetectiveMenuBtn.BackgroundColor3 = Color3.fromRGB(28, 50, 45)
+DetectiveMenuBtn.Text = "🕵️ Инспектор"
+DetectiveMenuBtn.TextColor3 = Color3.fromRGB(100, 255, 180)
+DetectiveMenuBtn.TextSize = 10
+DetectiveMenuBtn.Font = Enum.Font.FredokaOne
+Instance.new("UICorner", DetectiveMenuBtn).CornerRadius = UDim.new(0, 6)
+local DetectiveStroke = Instance.new("UIStroke", DetectiveMenuBtn)
+DetectiveStroke.Thickness = 1
+DetectiveStroke.Color = Color3.fromRGB(60, 180, 120)
+
 local UnloadBtn = Instance.new("TextButton", SubMenuFrame)
 UnloadBtn.Size = UDim2.new(1, -6, 0, 28)
 UnloadBtn.BackgroundColor3 = Color3.fromRGB(50, 20, 22)
@@ -530,6 +556,184 @@ Instance.new("UICorner", UnloadBtn).CornerRadius = UDim.new(0, 6)
 local UnloadStroke = Instance.new("UIStroke", UnloadBtn)
 UnloadStroke.Thickness = 1
 UnloadStroke.Color = Color3.fromRGB(200, 70, 70)
+
+-- ==========================================
+-- 🕵️ ОКНО ДЕТЕКТИВ-МЕНЮ (ИНСПЕКТОРА) И ПОД-МЕНЮ ФРАЗ
+-- ==========================================
+local DetectiveWindow = Instance.new("Frame", ScreenGui)
+DetectiveWindow.Name = "DetectiveWindow"
+DetectiveWindow.Size = UDim2.new(0, 240, 0, 210)
+DetectiveWindow.Position = UDim2.new(0.05, 180, 0.4, 0)
+DetectiveWindow.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
+DetectiveWindow.BackgroundTransparency = 0.05
+DetectiveWindow.Visible = false
+DetectiveWindow.Active = true
+DetectiveWindow.Draggable = true
+Instance.new("UICorner", DetectiveWindow).CornerRadius = UDim.new(0, 12)
+local DetWinStroke = Instance.new("UIStroke", DetectiveWindow)
+DetWinStroke.Thickness = 2
+DetWinStroke.Color = Color3.fromRGB(60, 180, 120)
+
+local DetTitle = Instance.new("TextLabel", DetectiveWindow)
+DetTitle.Size = UDim2.new(1, -35, 0, 30)
+DetTitle.Position = UDim2.new(0, 10, 0, 5)
+DetTitle.Text = "🕵️ Панель инспектора"
+DetTitle.TextColor3 = Color3.fromRGB(150, 255, 200)
+DetTitle.Font = Enum.Font.FredokaOne
+DetTitle.TextSize = 12
+DetTitle.BackgroundTransparency = 1
+DetTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local DetCloseBtn = Instance.new("TextButton", DetectiveWindow)
+DetCloseBtn.Size = UDim2.new(0, 24, 0, 24)
+DetCloseBtn.Position = UDim2.new(1, -30, 0, 6)
+DetCloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+DetCloseBtn.Text = "X"
+DetCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DetCloseBtn.Font = Enum.Font.FredokaOne
+DetCloseBtn.TextSize = 11
+Instance.new("UICorner", DetCloseBtn).CornerRadius = UDim.new(1, 0)
+
+-- Лейблы таймеров и предпросмотра
+local TimerChatLbl = Instance.new("TextLabel", DetectiveWindow)
+TimerChatLbl.Size = UDim2.new(1, -20, 0, 22)
+TimerChatLbl.Position = UDim2.new(0, 10, 0, 38)
+TimerChatLbl.Text = "⏱️ Сл. фраза через: 15с"
+TimerChatLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+TimerChatLbl.Font = Enum.Font.FredokaOne
+TimerChatLbl.TextSize = 10
+TimerChatLbl.BackgroundTransparency = 1
+TimerChatLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+local NextPhrasePreview = Instance.new("TextLabel", DetectiveWindow)
+NextPhrasePreview.Size = UDim2.new(1, -20, 0, 28)
+NextPhrasePreview.Position = UDim2.new(0, 10, 0, 60)
+NextPhrasePreview.Text = "💬 Сл: [ Загрузка... ]"
+NextPhrasePreview.TextColor3 = Color3.fromRGB(100, 200, 255)
+NextPhrasePreview.Font = Enum.Font.FredokaOne
+NextPhrasePreview.TextSize = 9
+NextPhrasePreview.TextWrapped = true
+NextPhrasePreview.BackgroundTransparency = 1
+NextPhrasePreview.TextXAlignment = Enum.TextXAlignment.Left
+
+local TimerSitLbl = Instance.new("TextLabel", DetectiveWindow)
+TimerSitLbl.Size = UDim2.new(1, -20, 0, 22)
+TimerSitLbl.Position = UDim2.new(0, 10, 0, 92)
+TimerSitLbl.Text = "🧘 Сл. присев: ~10с"
+TimerSitLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+TimerSitLbl.Font = Enum.Font.FredokaOne
+TimerSitLbl.TextSize = 10
+TimerSitLbl.BackgroundTransparency = 1
+TimerSitLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+local TimerStareLbl = Instance.new("TextLabel", DetectiveWindow)
+TimerStareLbl.Size = UDim2.new(1, -20, 0, 22)
+TimerStareLbl.Position = UDim2.new(0, 10, 0, 116)
+TimerStareLbl.Text = "👀 Сл. слежка: ~12с"
+TimerStareLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+TimerStareLbl.Font = Enum.Font.FredokaOne
+TimerStareLbl.TextSize = 10
+TimerStareLbl.BackgroundTransparency = 1
+TimerStareLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Кнопка открытия списка всех Idle-фраз
+local OpenPhrasesListBtn = Instance.new("TextButton", DetectiveWindow)
+OpenPhrasesListBtn.Size = UDim2.new(1, -20, 0, 32)
+OpenPhrasesListBtn.Position = UDim2.new(0, 10, 0, 146)
+OpenPhrasesListBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 120)
+OpenPhrasesListBtn.Text = "📜 Выбрать следующую фразу..."
+OpenPhrasesListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenPhrasesListBtn.Font = Enum.Font.FredokaOne
+OpenPhrasesListBtn.TextSize = 10
+Instance.new("UICorner", OpenPhrasesListBtn).CornerRadius = UDim.new(0, 6)
+
+-- ПОД-МЕНЮ СПИСКА ВСЕХ ФРАЗ
+local PhrasesWindow = Instance.new("Frame", ScreenGui)
+PhrasesWindow.Name = "PhrasesWindow"
+PhrasesWindow.Size = UDim2.new(0, 280, 0, 300)
+PhrasesWindow.Position = UDim2.new(0.05, 430, 0.4, 0)
+PhrasesWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
+PhrasesWindow.BackgroundTransparency = 0.05
+PhrasesWindow.Visible = false
+PhrasesWindow.Active = true
+PhrasesWindow.Draggable = true
+Instance.new("UICorner", PhrasesWindow).CornerRadius = UDim.new(0, 12)
+local PhrWinStroke = Instance.new("UIStroke", PhrasesWindow)
+PhrhrWinStroke = PhrWinStroke
+PhrWinStroke.Thickness = 2
+PhrWinStroke.Color = Color3.fromRGB(100, 150, 255)
+
+local PhrTitle = Instance.new("TextLabel", PhrasesWindow)
+PhrTitle.Size = UDim2.new(1, -35, 0, 30)
+PhrTitle.Position = UDim2.new(0, 10, 0, 5)
+PhrTitle.Text = "📜 Список всех Idle-фраз"
+PhrTitle.TextColor3 = Color3.fromRGB(150, 200, 255)
+PhrTitle.Font = Enum.Font.FredokaOne
+PhrTitle.TextSize = 12
+PhrTitle.BackgroundTransparency = 1
+PhrTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local PhrCloseBtn = Instance.new("TextButton", PhrasesWindow)
+PhrCloseBtn.Size = UDim2.new(0, 24, 0, 24)
+PhrCloseBtn.Position = UDim2.new(1, -30, 0, 6)
+PhrCloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+PhrCloseBtn.Text = "X"
+PhrCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+PhrCloseBtn.Font = Enum.Font.FredokaOne
+PhrCloseBtn.TextSize = 11
+Instance.new("UICorner", PhrCloseBtn).CornerRadius = UDim.new(1, 0)
+
+local PhrScrolling = Instance.new("ScrollingFrame", PhrasesWindow)
+PhrScrolling.Size = UDim2.new(1, -16, 1, -45)
+PhrScrolling.Position = UDim2.new(0, 8, 0, 38)
+PhrScrolling.BackgroundTransparency = 1
+PhrScrolling.ScrollBarThickness = 4
+PhrScrolling.ScrollBarImageColor3 = Color3.fromRGB(100, 150, 255)
+
+local PhrUIList = Instance.new("UIListLayout", PhrScrolling)
+PhrUIList.SortOrder = Enum.SortOrder.LayoutOrder
+PhrUIList.Padding = UDim.new(0, 4)
+
+PhrUIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    PhrScrolling.CanvasSize = UDim2.new(0, 0, 0, PhrUIList.AbsoluteContentSize.Y + 10)
+end)
+
+-- Функция заполнения списка фраз в зависимости от языка
+local function populatePhrasesList()
+    for _, child in ipairs(PhrScrolling:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    local dict = Translations[currentLanguage]
+    for _, phrase in ipairs(dict.randomPhrases) do
+        local btn = Instance.new("TextButton", PhrScrolling)
+        btn.Size = UDim2.new(1, -4, 0, 28)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
+        btn.Text = "• " .. phrase
+        btn.TextColor3 = Color3.fromRGB(220, 230, 255)
+        btn.Font = Enum.Font.FredokaOne
+        btn.TextSize = 9
+        btn.TextWrapped = true
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+        
+        btn.MouseButton1Click:Connect(function()
+            nextPhraseQueue = phrase
+            NextPhrasePreview.Text = currentLanguage == "RU" and ("💬 Сл: " .. phrase) or ("💬 Next: " .. phrase)
+            PhrasesWindow.Visible = false
+        end)
+    end
+end
+
+DetectiveMenuBtn.MouseButton1Click:Connect(function()
+    DetectiveWindow.Visible = not DetectiveWindow.Visible
+end)
+DetCloseBtn.MouseButton1Click:Connect(function() DetectiveWindow.Visible = false end)
+OpenPhrasesListBtn.MouseButton1Click:Connect(function()
+    populatePhrasesList()
+    PhrasesWindow.Visible = not PhrasesWindow.Visible
+end)
+PhrCloseBtn.MouseButton1Click:Connect(function() PhrasesWindow.Visible = false end)
 
 local function showUnloadConfirmation()
     local confirmOverlay = Instance.new("Frame", ScreenGui)
@@ -591,7 +795,7 @@ MenuToggleBtn.MouseButton1Click:Connect(function()
     menuOpen = not menuOpen
     if menuOpen then
         SubMenuFrame.Visible = true
-        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 130)}):Play()
+        TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 160)}):Play()
         TweenService:Create(MenuToggleBtn, tweenInfo, {Rotation = 90}):Play()
     else
         local tween = TweenService:Create(SubMenuFrame, tweenInfo, {Size = UDim2.new(0, 165, 0, 0)})
@@ -650,19 +854,27 @@ local function applyLanguageUI()
         LanguageStroke.Color = Color3.fromRGB(80, 160, 220)
         SetSpawnBtn.Text = "📍 Set Spawn Point"
         UnloadBtn.Text = "⛔ Delete Script"
+        DetectiveMenuBtn.Text = "🕵️ Inspector"
+        DetTitle.Text = "🕵️ Inspector Panel"
+        OpenPhrasesListBtn.Text = "📜 Choose Next Phrase..."
+        PhrTitle.Text = "📜 All Idle Phrases"
     else
         LanguageBtn.Text = "🌐 Язык: RU"
         LanguageBtn.TextColor3 = Color3.fromRGB(230, 210, 130)
         LanguageStroke.Color = Color3.fromRGB(180, 160, 80)
         SetSpawnBtn.Text = "📍 Задать спавн"
         UnloadBtn.Text = "⛔ Удалить скрипт"
+        DetectiveMenuBtn.Text = "🕵️ Инспектор"
+        DetTitle.Text = "🕵️ Панель инспектора"
+        OpenPhrasesListBtn.Text = "📜 Выбрать следующую фразу..."
+        PhrTitle.Text = "📜 Список всех Idle-фраз"
     end
     updateSpawnBtnState(returnToSpawnActive)
     updateLemonBtnState(lemonchikActive)
 end
 
 -- ==========================================
--- СПАВН-АНИМАЦИЯ (С СОХРАНЕНИЕМ ВЗГЛЯДА)
+-- СПАВН-АНИМАЦИЯ
 -- ==========================================
 local function playSpawnCutscene()
     isCutsceneActive = true
@@ -696,27 +908,21 @@ local function playSpawnCutscene()
 
         local dict = Translations[currentLanguage]
 
-        -- 1. Приветствие
         sayMessage(dict.spawnGreetings[math.random(#dict.spawnGreetings)])
         safeWait(3.5)
 
-        -- 2. Переход
         sayMessage(dict.introSequence.transition)
         safeWait(2.5)
 
-        -- 3. Не человек
         sayMessage(dict.introSequence.notHuman)
         safeWait(5.0)
 
-        -- 4. И еще
         sayMessage(dict.introSequence.transition2)
         safeWait(2.0)
 
-        -- 5. Команды
         sayMessage(dict.introSequence.tipInfo)
         safeWait(4.0)
 
-        -- 6. Финал катсцены (с исправленной буквой "е" в слове нужное)
         safeWait(3.0)
         sayMessage(dict.introSequence.finalOutro)
         safeWait(2.0)
@@ -919,7 +1125,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (С ИНТЕРАКТИВНЫМИ РЕАКЦИЯМИ И МАЛИНОЙ)
+-- ОБРАБОТКА ЧАТА
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
@@ -944,7 +1150,6 @@ local function processChatMessage(senderPlayer, msg)
 
     if dist > 12 then return end
 
-    -- Проверка мини-игры с малиной (если игрок написал "я" или "me" во время таймера)
     if raspberryEventActive and (cleanMsg == "я" or cleanMsg == "me") and (tick() - raspberryTimer <= 5) then
         raspberryEventActive = false
         lastResponseTime = tick()
@@ -982,7 +1187,6 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
-    -- Интерактивные триггеры ответов на фразы бота (если игрок написал "да", "я", "ты")
     if cleanMsg:find("да") or cleanMsg:find("я") or cleanMsg:find("ты") or cleanMsg:find("yes") or cleanMsg:find("you") then
         lastResponseTime = tick()
         hrp.CFrame = CFrame.lookAt(hrp.Position, Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z))
@@ -1061,12 +1265,40 @@ Players.PlayerAdded:Connect(function(p)
 end)
 
 -- ==========================================
--- ГЛАВНЫЙ ЦИКЛ ИИ
+-- ГЛАВНЫЙ ЦИКЛ ИИ И ОБНОВЛЕНИЕ ИНСПЕКТОРА
 -- ==========================================
 safeSpawn(function()
-    print("[BOT]: Поток ИИ запущен!")
+    print("[BOT]: Поток ИИ и Инспектора запущен!")
+    
+    local nextChatTimestamp = tick() + chatCooldown
+    local nextSitTimestamp = tick() + 10
+    local nextStareTimestamp = tick() + 12
+
     while true do
-        safeWait(0.2)
+        safeWait(0.1)
+
+        -- Обновление таймеров для Детектив-меню в реальном времени
+        if DetectiveWindow.Visible then
+            local chatLeft = math.max(0, math.floor(nextChatTimestamp - tick()))
+            local sitLeft = math.max(0, math.floor(nextSitTimestamp - tick()))
+            local stareLeft = math.max(0, math.floor(nextStareTimestamp - tick()))
+
+            if currentLanguage == "RU" then
+                TimerChatLbl.Text = "⏱️ Сл. фраза через: " .. chatLeft .. "с"
+                TimerSitLbl.Text = "🧘 Сл. присев: ~" .. sitLeft .. "с"
+                TimerStareLbl.Text = "👀 Сл. слежка: ~" .. stareLeft .. "с"
+            else
+                TimerChatLbl.Text = "⏱️ Next phrase in: " .. chatLeft .. "s"
+                TimerSitLbl.Text = "🧘 Next sit: ~" .. sitLeft .. "s"
+                TimerStareLbl.Text = "👀 Next stare: ~" .. stareLeft .. "s"
+            end
+
+            local dict = Translations[currentLanguage]
+            if not nextPhraseQueue then
+                nextPhraseQueue = dict.randomPhrases[math.random(#dict.randomPhrases)]
+            end
+            NextPhrasePreview.Text = "💬 Сл: " .. tostring(nextPhraseQueue)
+        end
 
         if botActive and not isCreepyMonologueActive and not isCutsceneActive then
             local char = LocalPlayer.Character
@@ -1183,8 +1415,8 @@ safeSpawn(function()
                         safeWait(math.random(3, 6))
                     else
                         local actionChance = math.random(1, 12)
+                        nextSitTimestamp = tick() + 8
 
-                        -- Шанс 1 — Присесть
                         if actionChance == 1 then
                             isSelfSitting = true
                             hum.Sit = true
@@ -1204,7 +1436,6 @@ safeSpawn(function()
                             isSelfSitting = false
                             safeWait(1)
 
-                        -- Шанс 2 — Оглянуться
                         elseif actionChance == 2 then
                             isSelfSitting = false
                             local baseCF = hrp.CFrame
@@ -1232,6 +1463,7 @@ safeSpawn(function()
 
                         elseif actionChance <= 4 then
                             isSelfSitting = false
+                            nextStareTimestamp = tick() + 6
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1280,21 +1512,26 @@ safeSpawn(function()
                     end
                 end
 
-                -- 5. Периодические случайные фразы (с шансом запустить событие малины)
+                -- 5. Периодические случайные фразы с учетом очереди из Инспектора
                 if tick() - lastChatTime >= chatCooldown then
                     local chosenPhrase = ""
-                    -- С небольшой вероятностью выдаем фразу про малину и активируем таймер
-                    if math.random(1, 5) == 1 then
-                        chosenPhrase = dict.raspberryPhrase
-                        raspberryEventActive = true
-                        raspberryTimer = tick()
+                    if nextPhraseQueue then
+                        chosenPhrase = nextPhraseQueue
+                        nextPhraseQueue = nil
                     else
-                        chosenPhrase = dict.randomPhrases[math.random(#dict.randomPhrases)]
+                        if math.random(1, 5) == 1 then
+                            chosenPhrase = dict.raspberryPhrase
+                            raspberryEventActive = true
+                            raspberryTimer = tick()
+                        else
+                            chosenPhrase = dict.randomPhrases[math.random(#dict.randomPhrases)]
+                        end
                     end
 
                     sayMessage(chosenPhrase)
                     lastChatTime = tick()
                     chatCooldown = math.random(12, 25)
+                    nextChatTimestamp = tick() + chatCooldown
                 end
 
             end
@@ -1305,4 +1542,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Финальный скрипт с пасхалкой про малину запущен!")
+print("[BOT]: Финальный скрипт с Панелью Инспектора успешно запущен!")
