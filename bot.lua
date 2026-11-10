@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE + SKY SPAWN + EPIC INTRO + RANDOM COOLDOWN + DETECTOR + NEW REPLIES)
+-- LIVE SKIN BOT (LANGUAGE + SKY SPAWN + EPIC INTRO + RASPBERRY + DETECTIVE PANEL + PRAISE EVENT)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с эпичным падением, плавными поворотами и новыми фразами...")
+print("[BOT]: Запуск Апельсинчика с исправленными командами и реакцией на похвалу...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -124,6 +124,13 @@ local Translations = {
         raspberryPhrase = "Я за малиной кто сомной?.. никто?..",
         raspberryReaction = "это небыло вопросом...peace duke",
         
+        praiseReactions = {
+            ":DDDDD",
+            "^^",
+            "УРЫЫЫЫ Я ЗДЕЛАЛ ЧТОТО ПРАВИЛЬНОЕ!!",
+            "＾∀＾"
+        },
+        
         chatReactions = {
             "А ДА НУУУ НАФИГ?",
             "Тоже мне.. умник нашелся",
@@ -225,6 +232,13 @@ local Translations = {
         },
         raspberryPhrase = "Going for raspberries who's with me?.. nobody?..",
         raspberryReaction = "it wasn't a question...peace duke",
+        
+        praiseReactions = {
+            ":DDDDD",
+            "^^",
+            "YAAAAAY I DID SOMETHING RIGHT!!",
+            "＾∀＾"
+        },
         
         chatReactions = {
             "OH HELL NO??",
@@ -876,7 +890,6 @@ local function playSpawnCutscene()
         local originalLookVector = hrp.CFrame.LookVector
         local groundPos = hrp.Position
         
-        -- Поднимаем высоко в небо (на высоту 110 стадов)
         hrp.CFrame = CFrame.new(groundPos + Vector3.new(0, 110, 0))
         
         safeWait(0.3)
@@ -1116,7 +1129,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ПЛАВНЫЙ ПОВОРОТ К ИГРОКУ)
+-- ОБРАБОТКА ЧАТА (ИСПРАВЛЕНЫ КОМАНДЫ + РЕАКЦИЯ НА ПОХВАЛУ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
@@ -1141,16 +1154,55 @@ local function processChatMessage(senderPlayer, msg)
 
     if dist > 12 then return end
 
+    -- 1. Сначала проверяем команды (чтобы они не перехватывались аргументами)
+    if cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
+        lastResponseTime = tick()
+        local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
+        for i = 1, 8 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.3) end
+            safeWait(0.03)
+        end
+        if math.random(1, 10) == 1 then
+            triggerCreepyMonologue(senderPlayer)
+        else
+            sayMessage(dict.tips[math.random(#dict.tips)])
+        end
+        return
+    end
+
+    -- 2. Проверка мини-игры с малиной
     if raspberryEventActive and (cleanMsg == "я" or cleanMsg == "me") and (tick() - raspberryTimer <= 5) then
         raspberryEventActive = false
         lastResponseTime = tick()
-        -- Плавный поворот к игроку
         local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
         for i = 1, 8 do
             if hrp then hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.3) end
             safeWait(0.03)
         end
         sayMessage(dict.raspberryReaction)
+        return
+    end
+
+    -- 3. Проверка похвалы ("молодец" / "поздравляю")
+    if cleanMsg:find("молодец") or cleanMsg:find("поздравляю") or cleanMsg:find("good job") or cleanMsg:find("congrats") then
+        lastResponseTime = tick()
+        local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
+        for i = 1, 8 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.3) end
+            safeWait(0.03)
+        end
+        
+        -- Бот прыгает и крутится
+        safeSpawn(function()
+            if hum then hum.Jump = true end
+            local baseCF = hrp.CFrame
+            for i = 1, 15 do
+                if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(24), 0) end
+                safeWait(0.03)
+            end
+        end)
+
+        sayMessage(dict.praiseReactions[math.random(#dict.praiseReactions)])
         return
     end
 
@@ -1187,7 +1239,7 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
-    -- Интерактивные триггеры ответов (с плавным поворотом)
+    -- Интерактивные триггеры ответов на аргументы
     if cleanMsg:find("да") or cleanMsg:find("я") or cleanMsg:find("ты") or cleanMsg:find("yes") or cleanMsg:find("you") then
         lastResponseTime = tick()
         local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
@@ -1228,14 +1280,6 @@ local function processChatMessage(senderPlayer, msg)
             safeWait(0.03)
         end
         sayMessage(dict.evaluation[math.random(#dict.evaluation)])
-
-    elseif cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
-        lastResponseTime = tick()
-        if math.random(1, 10) == 1 then
-            triggerCreepyMonologue(senderPlayer)
-        else
-            sayMessage(dict.tips[math.random(#dict.tips)])
-        end
 
     elseif cleanMsg:find("ты бот") or cleanMsg:find("ты ботик") or cleanMsg:find("you bot") or cleanMsg:find("are you a bot") then
         lastResponseTime = tick()
@@ -1495,7 +1539,7 @@ safeSpawn(function()
                                 end
                             else
                                 safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(math.random(2, 5))
+                                safeWait(2, 5)
                             end
 
                         elseif actionChance == 5 then
@@ -1559,4 +1603,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Финальный скрипт со всеми доработками успешно запущен!")
+print("[BOT]: Финальный скрипт с реакцией на похвалу успешно запущен!")
