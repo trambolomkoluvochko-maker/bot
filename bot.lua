@@ -1,8 +1,8 @@
 -- ==========================================
--- LIVE SKIN BOT (LANGUAGE + SKY SPAWN + EPIC INTRO + RASPBERRY + DETECTIVE PANEL + PRAISE EVENT)
+-- LIVE SKIN BOT (LANGUAGE + SKY SPAWN + EPIC INTRO + PRAISE + FIXED TIMERS & GREETINGS + INSPECTOR UPGRADE)
 -- ==========================================
 
-print("[BOT]: Запуск Апельсинчика с исправленными командами и реакцией на похвалу...")
+print("[BOT]: Запуск Апельсинчика с исправленными таймерами, приветствиями и обновленным Инспектором...")
 
 local safeWait = function(t)
     return (task and task.wait or wait)(t or 0.1)
@@ -47,8 +47,8 @@ local Connections = {}
 -- Переменные для детектив-панели (Инспектора)
 local nextPhraseQueue = nil
 local nextChatTimestamp = tick() + chatCooldown
-local nextSitTimestamp = tick() + 10
-local nextStareTimestamp = tick() + 12
+local nextSitTimestamp = tick() + 8
+local nextStareTimestamp = tick() + 6
 
 -- Переменные мини-игры с малиной
 local raspberryEventActive = false
@@ -566,11 +566,11 @@ UnloadStroke.Thickness = 1
 UnloadStroke.Color = Color3.fromRGB(200, 70, 70)
 
 -- ==========================================
--- 🕵️ ОКНО ДЕТЕКТИВ-МЕНЮ (ИНСПЕКТОРА) И ПОД-МЕНЮ ФРАЗ
+-- 🕵️ ОКНО ДЕТЕКТИВ-МЕНЮ (ИНСПЕКТОРА) - ОБНОВЛЕННОЕ
 -- ==========================================
 local DetectiveWindow = Instance.new("Frame", ScreenGui)
 DetectiveWindow.Name = "DetectiveWindow"
-DetectiveWindow.Size = UDim2.new(0, 240, 0, 210)
+DetectiveWindow.Size = UDim2.new(0, 250, 0, 260)
 DetectiveWindow.Position = UDim2.new(0.05, 180, 0.4, 0)
 DetectiveWindow.BackgroundColor3 = Color3.fromRGB(20, 22, 30)
 DetectiveWindow.BackgroundTransparency = 0.05
@@ -603,18 +603,18 @@ DetCloseBtn.TextSize = 11
 Instance.new("UICorner", DetCloseBtn).CornerRadius = UDim.new(1, 0)
 
 local TimerChatLbl = Instance.new("TextLabel", DetectiveWindow)
-TimerChatLbl.Size = UDim2.new(1, -20, 0, 22)
-TimerChatLbl.Position = UDim2.new(0, 10, 0, 38)
-TimerChatLbl.Text = "⏱️ Сл. фраза через: 15с"
+TimerChatLbl.Size = UDim2.new(1, -20, 0, 20)
+TimerChatLbl.Position = UDim2.new(0, 10, 0, 35)
+TimerChatLbl.Text = "⏱️ Сл. фраза: 15с"
 TimerChatLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
 TimerChatLbl.Font = Enum.Font.FredokaOne
-TimerChatLbl.TextSize = 10
+TimerChatLbl.TextSize = 9
 TimerChatLbl.BackgroundTransparency = 1
 TimerChatLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 local NextPhrasePreview = Instance.new("TextLabel", DetectiveWindow)
-NextPhrasePreview.Size = UDim2.new(1, -20, 0, 28)
-NextPhrasePreview.Position = UDim2.new(0, 10, 0, 60)
+NextPhrasePreview.Size = UDim2.new(1, -20, 0, 25)
+NextPhrasePreview.Position = UDim2.new(0, 10, 0, 55)
 NextPhrasePreview.Text = "💬 Сл: [ Загрузка... ]"
 NextPhrasePreview.TextColor3 = Color3.fromRGB(100, 200, 255)
 NextPhrasePreview.Font = Enum.Font.FredokaOne
@@ -623,41 +623,62 @@ NextPhrasePreview.TextWrapped = true
 NextPhrasePreview.BackgroundTransparency = 1
 NextPhrasePreview.TextXAlignment = Enum.TextXAlignment.Left
 
+local NextResponsePreview = Instance.new("TextLabel", DetectiveWindow)
+NextResponsePreview.Size = UDim2.new(1, -20, 0, 25)
+NextResponsePreview.Position = UDim2.new(0, 10, 0, 80)
+NextResponsePreview.Text = "⚡ Ответ на аргумент: [ Готов ]"
+NextResponsePreview.TextColor3 = Color3.fromRGB(255, 180, 100)
+NextResponsePreview.Font = Enum.Font.FredokaOne
+NextResponsePreview.TextSize = 9
+NextResponsePreview.TextWrapped = true
+NextResponsePreview.BackgroundTransparency = 1
+NextResponsePreview.TextXAlignment = Enum.TextXAlignment.Left
+
+local TargetInfoLbl = Instance.new("TextLabel", DetectiveWindow)
+TargetInfoLbl.Size = UDim2.new(1, -20, 0, 20)
+TargetInfoLbl.Position = UDim2.new(0, 10, 0, 107)
+TargetInfoLbl.Text = "🎯 Ближайший: Нет никого"
+TargetInfoLbl.TextColor3 = Color3.fromRGB(200, 150, 255)
+TargetInfoLbl.Font = Enum.Font.FredokaOne
+TargetInfoLbl.TextSize = 9
+TargetInfoLbl.BackgroundTransparency = 1
+TargetInfoLbl.TextXAlignment = Enum.TextXAlignment.Left
+
 local TimerSitLbl = Instance.new("TextLabel", DetectiveWindow)
-TimerSitLbl.Size = UDim2.new(1, -20, 0, 22)
-TimerSitLbl.Position = UDim2.new(0, 10, 0, 92)
-TimerSitLbl.Text = "🧘 Сл. присев: ~10с"
+TimerSitLbl.Size = UDim2.new(1, -20, 0, 20)
+TimerSitLbl.Position = UDim2.new(0, 10, 0, 127)
+TimerSitLbl.Text = "🧘 Сл. присев: ~8с"
 TimerSitLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
 TimerSitLbl.Font = Enum.Font.FredokaOne
-TimerSitLbl.TextSize = 10
+TimerSitLbl.TextSize = 9
 TimerSitLbl.BackgroundTransparency = 1
 TimerSitLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 local TimerStareLbl = Instance.new("TextLabel", DetectiveWindow)
-TimerStareLbl.Size = UDim2.new(1, -20, 0, 22)
-TimerStareLbl.Position = UDim2.new(0, 10, 0, 116)
-TimerStareLbl.Text = "👀 Сл. слежка: ~12с"
+TimerStareLbl.Size = UDim2.new(1, -20, 0, 20)
+TimerStareLbl.Position = UDim2.new(0, 10, 0, 147)
+TimerStareLbl.Text = "👀 Сл. слежка: ~6с"
 TimerStareLbl.TextColor3 = Color3.fromRGB(220, 220, 220)
 TimerStareLbl.Font = Enum.Font.FredokaOne
-TimerStareLbl.TextSize = 10
+TimerStareLbl.TextSize = 9
 TimerStareLbl.BackgroundTransparency = 1
 TimerStareLbl.TextXAlignment = Enum.TextXAlignment.Left
 
 local OpenPhrasesListBtn = Instance.new("TextButton", DetectiveWindow)
-OpenPhrasesListBtn.Size = UDim2.new(1, -20, 0, 32)
-OpenPhrasesListBtn.Position = UDim2.new(0, 10, 0, 146)
+OpenPhrasesListBtn.Size = UDim2.new(1, -20, 0, 30)
+OpenPhrasesListBtn.Position = UDim2.new(0, 10, 0, 175)
 OpenPhrasesListBtn.BackgroundColor3 = Color3.fromRGB(40, 80, 120)
 OpenPhrasesListBtn.Text = "📜 Выбрать следующую фразу..."
 OpenPhrasesListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 OpenPhrasesListBtn.Font = Enum.Font.FredokaOne
-OpenPhrasesListBtn.TextSize = 10
+OpenPhrasesListBtn.TextSize = 9
 Instance.new("UICorner", OpenPhrasesListBtn).CornerRadius = UDim.new(0, 6)
 
 -- ПОД-МЕНЮ СПИСКА ВСЕХ ФРАЗ
 local PhrasesWindow = Instance.new("Frame", ScreenGui)
 PhrasesWindow.Name = "PhrasesWindow"
 PhrasesWindow.Size = UDim2.new(0, 280, 0, 300)
-PhrasesWindow.Position = UDim2.new(0.05, 430, 0.4, 0)
+PhrasesWindow.Position = UDim2.new(0.05, 440, 0.4, 0)
 PhrasesWindow.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
 PhrasesWindow.BackgroundTransparency = 0.05
 PhrasesWindow.Visible = false
@@ -1129,7 +1150,7 @@ local function triggerCreepyMonologue(senderPlayer)
 end
 
 -- ==========================================
--- ОБРАБОТКА ЧАТА (ИСПРАВЛЕНЫ КОМАНДЫ + РЕАКЦИЯ НА ПОХВАЛУ)
+-- ОБРАБОТКА ЧАТА (ИСПРАВЛЕНЫ ПРИВЕТСТВИЯ И ПРИОРИТЕТЫ)
 -- ==========================================
 local function processChatMessage(senderPlayer, msg)
     if not botActive or isCreepyMonologueActive or isCutsceneActive or senderPlayer == LocalPlayer then return end
@@ -1154,7 +1175,7 @@ local function processChatMessage(senderPlayer, msg)
 
     if dist > 12 then return end
 
-    -- 1. Сначала проверяем команды (чтобы они не перехватывались аргументами)
+    -- 1. Команды
     if cleanMsg:find("команды") or cleanMsg:find("commands") or cleanMsg:find("help") or cleanMsg:find("помощь") then
         lastResponseTime = tick()
         local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
@@ -1170,7 +1191,19 @@ local function processChatMessage(senderPlayer, msg)
         return
     end
 
-    -- 2. Проверка мини-игры с малиной
+    -- 2. Приветствия (ИСПРАВЛЕНО: теперь срабатывают гарантированно!)
+    if isGreeting(cleanMsg) then
+        lastResponseTime = tick()
+        local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
+        for i = 1, 8 do
+            if hrp then hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.3) end
+            safeWait(0.03)
+        end
+        sayMessage(dict.greetings[math.random(#dict.greetings)])
+        return
+    end
+
+    -- 3. Малина
     if raspberryEventActive and (cleanMsg == "я" or cleanMsg == "me") and (tick() - raspberryTimer <= 5) then
         raspberryEventActive = false
         lastResponseTime = tick()
@@ -1183,7 +1216,7 @@ local function processChatMessage(senderPlayer, msg)
         return
     end
 
-    -- 3. Проверка похвалы ("молодец" / "поздравляю")
+    -- 4. Похвала
     if cleanMsg:find("молодец") or cleanMsg:find("поздравляю") or cleanMsg:find("good job") or cleanMsg:find("congrats") then
         lastResponseTime = tick()
         local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
@@ -1192,10 +1225,8 @@ local function processChatMessage(senderPlayer, msg)
             safeWait(0.03)
         end
         
-        -- Бот прыгает и крутится
         safeSpawn(function()
             if hum then hum.Jump = true end
-            local baseCF = hrp.CFrame
             for i = 1, 15 do
                 if hrp then hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(24), 0) end
                 safeWait(0.03)
@@ -1239,7 +1270,7 @@ local function processChatMessage(senderPlayer, msg)
 
     if tick() - lastResponseTime < 2 then return end
 
-    -- Интерактивные триггеры ответов на аргументы
+    -- 5. Ответы на аргументы
     if cleanMsg:find("да") or cleanMsg:find("я") or cleanMsg:find("ты") or cleanMsg:find("yes") or cleanMsg:find("you") then
         lastResponseTime = tick()
         local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
@@ -1251,16 +1282,7 @@ local function processChatMessage(senderPlayer, msg)
         return
     end
 
-    if isGreeting(cleanMsg) then
-        lastResponseTime = tick()
-        local targetLookPos = Vector3.new(senderHrp.Position.X, hrp.Position.Y, senderHrp.Position.Z)
-        for i = 1, 8 do
-            if hrp then hrp.CFrame = hrp.CFrame:Lerp(CFrame.lookAt(hrp.Position, targetLookPos), 0.3) end
-            safeWait(0.03)
-        end
-        sayMessage(dict.greetings[math.random(#dict.greetings)])
-
-    elseif cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
+    if cleanMsg:find("ответь на вопрос") or cleanMsg:find("ответь") or cleanMsg:find("answer my question") or cleanMsg:find("ask question") then
         lastResponseTime = tick()
         questionUser = senderPlayer
         waitingForQuestion = true
@@ -1338,18 +1360,18 @@ safeSpawn(function()
     while true do
         safeWait(0.1)
 
-        -- Обновление таймеров для Детектив-меню в реальном времени
+        -- Обновление таймеров для Детектив-меню в реальном времени (ИСПРАВЛЕНО)
         if DetectiveWindow.Visible then
             local chatLeft = math.max(0, math.floor(nextChatTimestamp - tick()))
             local sitLeft = math.max(0, math.floor(nextSitTimestamp - tick()))
             local stareLeft = math.max(0, math.floor(nextStareTimestamp - tick()))
 
             if currentLanguage == "RU" then
-                TimerChatLbl.Text = "⏱️ Сл. фраза через: " .. chatLeft .. "с"
+                TimerChatLbl.Text = "⏱️ Сл. фраза: " .. chatLeft .. "с"
                 TimerSitLbl.Text = "🧘 Сл. присев: ~" .. sitLeft .. "с"
                 TimerStareLbl.Text = "👀 Сл. слежка: ~" .. stareLeft .. "с"
             else
-                TimerChatLbl.Text = "⏱️ Next phrase in: " .. chatLeft .. "s"
+                TimerChatLbl.Text = "⏱️ Next phrase: " .. chatLeft .. "s"
                 TimerSitLbl.Text = "🧘 Next sit: ~" .. sitLeft .. "s"
                 TimerStareLbl.Text = "👀 Next stare: ~" .. stareLeft .. "s"
             end
@@ -1359,6 +1381,19 @@ safeSpawn(function()
                 nextPhraseQueue = dict.randomPhrases[math.random(#dict.randomPhrases)]
             end
             NextPhrasePreview.Text = "💬 Сл: " .. tostring(nextPhraseQueue)
+
+            -- Отображение случайной ответной фразы на аргументы
+            local sampleReaction = dict.chatReactions[math.random(#dict.chatReactions)]
+            NextResponsePreview.Text = "⚡ Ответ на арг: " .. sampleReaction
+
+            -- Отображение ближайшего игрока
+            local _, nearestP = getNearestPlayer(0, 40)
+            if nearestP then
+                local dist = math.floor((nearestP.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
+                TargetInfoLbl.Text = "🎯 Ближайший: " .. nearestP.Name .. " (" .. dist .. "м)"
+            else
+                TargetInfoLbl.Text = "🎯 Ближайший: Нет никого"
+            end
         end
 
         if botActive and not isCreepyMonologueActive and not isCutsceneActive then
@@ -1476,7 +1511,7 @@ safeSpawn(function()
                         safeWait(math.random(3, 6))
                     else
                         local actionChance = math.random(1, 12)
-                        nextSitTimestamp = tick() + 8
+                        nextSitTimestamp = tick() + math.random(6, 12)
 
                         if actionChance == 1 then
                             isSelfSitting = true
@@ -1524,7 +1559,7 @@ safeSpawn(function()
 
                         elseif actionChance <= 4 then
                             isSelfSitting = false
-                            nextStareTimestamp = tick() + 6
+                            nextStareTimestamp = tick() + math.random(5, 10)
                             local targetChar = getNearestPlayer(12, 55)
                             if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and not staringPlayer then
                                 local tHrp = targetChar.HumanoidRootPart
@@ -1539,7 +1574,7 @@ safeSpawn(function()
                                 end
                             else
                                 safeMoveTo(hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20)))
-                                safeWait(2, 5)
+                                safeWait(math.random(2, 5))
                             end
 
                         elseif actionChance == 5 then
@@ -1603,4 +1638,4 @@ end)
 -- Показываем окно выбора языка при старте
 showLanguagePopup()
 
-print("[BOT]: Финальный скрипт с реакцией на похвалу успешно запущен!")
+print("[BOT]: Финальный скрипт с исправленными таймерами и Инспектором успешно запущен!")
